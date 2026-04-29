@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>BakeManage - Login</title>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/login-screen.css">
+</head>
+<body>
+    <div id="loginScreen" class="login-screen">
+        <div class="login-box">
+            <h2>🍰 BakeManage</h2>
+
+            <button id="googleLoginBtn" class="google-btn">
+                🚀 Đăng nhập bằng Google
+            </button>
+
+            <div class="divider">
+                <span>Hoặc</span>
+            </div>
+
+            <div id="loginForm">
+                <input type="email" id="loginEmail" placeholder="Email">
+                <input type="password" id="loginPassword" placeholder="Mật khẩu">
+                <button id="loginBtn">Đăng nhập</button>
+                <div class="switch-mode" onclick="showRegister()">Chưa có tài khoản? Đăng ký</div>
+            </div>
+
+            <div id="registerForm" style="display:none;">
+                <input type="email" id="regEmail" placeholder="Email">
+                <input type="password" id="regPassword" placeholder="Mật khẩu (6+ ký tự)">
+                <button id="registerBtn">Đăng ký</button>
+                <div class="switch-mode" onclick="showLogin()">Đã có tài khoản? Đăng nhập</div>
+            </div>
+
+            <div id="authMessage" class="error-msg"></div>
+        </div>
+    </div>
+
+    <script src="../js/firebase-config.js"></script>
+    <script src="../js/state.js"></script>
+    <script src="../js/data.js"></script>
+    <script src="../js/business.js"></script>
+    <script src="../js/ui.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/events.js"></script>
+</body>
+</html>
