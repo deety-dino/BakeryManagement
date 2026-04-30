@@ -96,15 +96,19 @@ async function handleOfflineRequest(path, options = {}) {
     const method = options.method || 'GET';
     const body = options.body ? JSON.parse(options.body) : null;
 
+    const masterIdValue = body?.masterId || body?.master_id || body?.masterUid || body?.master_uid || '';
+    const shopIdValue = body?.shopId || body?.shop_id || '';
+
     // Master login
     if (path === '/api/auth/master-login' && method === 'POST') {
-        const master = findMaster(body.masterId);
-        if (!master || master.password !== body.password) {
+        const master = findMaster(masterIdValue);
+        const passwordValue = body?.password || body?.passwordHash || '';
+        if (!master || master.password !== passwordValue) {
             throw new Error('Master ID hoặc password không đúng');
         }
         const session = {
             masterUid: master.master_uid,
-            masterId: body.masterId,
+            masterId: master.master_id || master.master_uid,
             role: 'master'
         };
         writeAuthSession(session);
@@ -113,21 +117,23 @@ async function handleOfflineRequest(path, options = {}) {
 
     // Shop login
     if (path === '/api/auth/shop-login' && method === 'POST') {
-        const shop = findShop(body.shop_id);
-        const master = findMaster(body.master_id);
+        const shop = findShop(shopIdValue);
+        const master = findMaster(masterIdValue);
         if (!shop || !master) {
             throw new Error('Chi nhánh hoặc master không tồn tại');
         }
         
-        const isAdmin = body.password === shop.administrator_password;
-        const isStaff = body.password === shop.staff_password;
+        const passwordValue = body?.password || body?.passwordHash || '';
+        const isAdmin = passwordValue === shop.administrator_password;
+        const isStaff = passwordValue === shop.staff_password;
         if (!isAdmin && !isStaff) {
             throw new Error('Mật khẩu không đúng');
         }
 
         const session = {
-            masterUid: body.master_id,
-            shopId: body.shop_id,
+            masterUid: master.master_uid || masterIdValue,
+            masterId: master.master_id || master.master_uid || masterIdValue,
+            shopId: shop.shop_id,
             role: isAdmin ? 'admin' : 'staff'
         };
         writeAuthSession(session);
@@ -136,23 +142,39 @@ async function handleOfflineRequest(path, options = {}) {
 
     // Register shop (master)
     if (path === '/api/auth/register' && method === 'POST') {
+        const passwordValue = body?.password || body?.passwordHash || '';
+        const masterName = body?.masterName || body?.name || masterIdValue || 'Master User';
+        const shopName = body?.shopName || 'Chi nhánh mặc định';
+        const data = getMockData();
+        const existingMaster = data.masters.find(m => m.master_uid === masterIdValue || m.master_id === masterIdValue);
+        if (existingMaster) {
+            throw new Error('master_id đã tồn tại');
+        }
+
+        const newMaster = {
+            master_uid: masterIdValue,
+            master_id: masterIdValue,
+            password: passwordValue,
+            name: masterName
+        };
+        data.masters.push(newMaster);
+
+        const createdShop = addShop({
+            master_uid: masterIdValue,
+            shop_name: shopName,
+            administrator_password: passwordValue,
+            staff_password: passwordValue
+        });
+
+        saveMockData(data);
         const session = {
-            masterUid: body.master_id,
-            masterId: body.master_id,
+            masterUid: newMaster.master_uid,
+            masterId: newMaster.master_id,
+            shopId: createdShop?.shop_id || '',
+            shopName: createdShop?.shop_name || shopName,
             role: 'master'
         };
-        
-        const data = getMockData();
-        const existingMaster = data.masters.find(m => m.master_uid === body.master_id);
-        if (!existingMaster) {
-            data.masters.push({
-                master_uid: body.master_id,
-                password: body.password,
-                name: body.name || 'Master User'
-            });
-            saveMockData(data);
-        }
-        
+
         writeAuthSession(session);
         return { success: true, session };
     }

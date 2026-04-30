@@ -47,6 +47,7 @@ function setAuthMessage(text) {
 function setActiveLoginMode(mode) {
     const adminPanel = document.getElementById('adminLoginForm');
     const branchPanel = document.getElementById('branchLoginForm');
+    const registerPanel = document.getElementById('registerStoreForm');
 
     if (adminPanel) {
         adminPanel.classList.toggle('active', mode === 'admin');
@@ -55,6 +56,10 @@ function setActiveLoginMode(mode) {
     if (branchPanel) {
         branchPanel.classList.toggle('active', mode === 'branch');
         branchPanel.style.display = mode === 'branch' ? 'block' : 'none';
+    }
+    if (registerPanel) {
+        registerPanel.classList.remove('active');
+        registerPanel.style.display = 'none';
     }
 
     document.querySelectorAll('.choice-btn').forEach((button) => {
@@ -71,6 +76,72 @@ window.showAdminLogin = function () {
 window.showBranchLogin = function () {
     setActiveLoginMode('branch');
 };
+
+window.showRegisterStore = function () {
+    const adminPanel = document.getElementById('adminLoginForm');
+    const branchPanel = document.getElementById('branchLoginForm');
+    const registerPanel = document.getElementById('registerStoreForm');
+
+    if (adminPanel) {
+        adminPanel.classList.remove('active');
+        adminPanel.style.display = 'none';
+    }
+    if (branchPanel) {
+        branchPanel.classList.remove('active');
+        branchPanel.style.display = 'none';
+    }
+    if (registerPanel) {
+        registerPanel.classList.add('active');
+        registerPanel.style.display = 'block';
+    }
+
+    document.querySelectorAll('.choice-btn').forEach((button) => {
+        button.classList.remove('active');
+    });
+
+    setAuthMessage('');
+};
+
+function handleRegisterStore() {
+    const masterId = document.getElementById('registerMasterId')?.value?.trim();
+    const masterName = document.getElementById('registerMasterName')?.value?.trim();
+    const shopName = document.getElementById('registerShopName')?.value?.trim();
+    const password = document.getElementById('registerPassword')?.value?.trim();
+    const confirmPassword = document.getElementById('registerConfirmPassword')?.value?.trim();
+
+    if (!masterId || !password || !confirmPassword) {
+        setAuthMessage('Vui long nhap day du thong tin dang ky');
+        return;
+    }
+
+    if (password !== confirmPassword) {
+        setAuthMessage('Mat khau nhap lai khong khop');
+        return;
+    }
+
+    window.dbApi?.registerShop?.({
+        masterId,
+        masterName: masterName || masterId,
+        shopName: shopName || 'Chi nhánh mặc định',
+        password,
+        recheckPassword: confirmPassword
+    })
+        .then((result) => {
+            const session = {
+                masterUid: result?.session?.masterUid || result?.masterUid || masterId,
+                masterId: result?.session?.masterId || result?.masterId || masterId,
+                shopId: result?.session?.shopId || result?.shopId || '',
+                shopName: result?.session?.shopName || result?.shopName || shopName || 'Chi nhánh mặc định',
+                role: 'master'
+            };
+
+            writeSession(session);
+            goToShopManagementPage();
+        })
+        .catch((error) => {
+            setAuthMessage(`Loi: ${error?.message || 'Dang ky that bai'}`);
+        });
+}
 
 function ensureLoginVisible() {
     const loginScreen = document.getElementById('loginScreen');
@@ -163,6 +234,12 @@ function bindLoginEvents() {
 
     const branchStaffBtn = document.getElementById('branchStaffBtn');
     if (branchStaffBtn) branchStaffBtn.addEventListener('click', () => loginBranch('staff'));
+
+    const registerStoreBtn = document.getElementById('registerStoreBtn');
+    if (registerStoreBtn) registerStoreBtn.addEventListener('click', handleRegisterStore);
+
+    const cancelRegisterBtn = document.getElementById('cancelRegisterBtn');
+    if (cancelRegisterBtn) cancelRegisterBtn.addEventListener('click', () => setActiveLoginMode('admin'));
 }
 
 function bootstrapAuth() {

@@ -63,7 +63,7 @@ function saveMockData(data) {
 // Master operations
 function findMaster(masterId) {
     const data = getMockData();
-    return data.masters.find(m => m.master_uid === masterId);
+    return data.masters.find(m => m.master_uid === masterId || m.master_id === masterId);
 }
 
 function findShop(shopId) {

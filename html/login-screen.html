@@ -15,6 +15,7 @@
             <div id="loginChoice" class="login-choice">
                 <button type="button" class="choice-btn active" data-mode="admin" onclick="showAdminLogin()">Đăng nhập với quản trị viên</button>
                 <button type="button" class="choice-btn" data-mode="branch" onclick="showBranchLogin()">Đăng nhập với chi nhánh</button>
+                <button type="button" class="choice-btn" onclick="showRegisterStore()">Đăng ký cửa hàng mới</button>
             </div>
 
             <div id="adminLoginForm" class="login-panel active">
@@ -34,6 +35,20 @@
                     <button id="branchStaffBtn">Đăng nhập Nhân viên</button>
                 </div>
                 <div class="hint">Quản lý dùng <b>administrator_password</b>, nhân viên dùng <b>staff_password</b>.</div>
+            </div>
+
+            <div id="registerStoreForm" class="login-panel" style="display:none;">
+                <div class="panel-title">Đăng ký cửa hàng mới</div>
+                <input type="text" id="registerMasterId" placeholder="master_id">
+                <input type="text" id="registerMasterName" placeholder="Tên chủ cửa hàng">
+                <input type="text" id="registerShopName" placeholder="Tên cửa hàng chính">
+                <input type="password" id="registerPassword" placeholder="Mật khẩu">
+                <input type="password" id="registerConfirmPassword" placeholder="Nhập lại mật khẩu">
+                <div class="login-actions">
+                    <button id="registerStoreBtn" class="google-btn">Đăng ký</button>
+                    <button id="cancelRegisterBtn" type="button" class="btn-outline">Hủy</button>
+                </div>
+                <div class="hint">Hệ thống sẽ tạo luôn cửa hàng mặc định để bạn đăng nhập ngay sau khi đăng ký.</div>
             </div>
 
             <div id="authMessage" class="error-msg"></div>
