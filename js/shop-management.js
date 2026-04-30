@@ -10,6 +10,15 @@ let shopSecretsUnlocked = false;
 document.addEventListener('DOMContentLoaded', initializeShopManagement);
 
 function initializeShopManagement() {
+    // Guard: Check if user is logged in before trying to load protected data
+    const session = readSession?.() || window.dbApi?.getSession?.();
+    if (!session?.masterUid) {
+        console.log('[shop-management] No session found, skipping initialization until user logs in');
+        return;
+    }
+    
+    console.log('[shop-management] Session found, initializing:', { masterId: session.masterId, role: session.role });
+    
     // Tab switching
     const tabButtons = document.querySelectorAll('.tab-btn');
     tabButtons.forEach(btn => {

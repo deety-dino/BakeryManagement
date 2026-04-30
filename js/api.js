@@ -25,31 +25,59 @@ function shouldUseOfflineFallback(error) {
 function readAuthSession() {
     try {
         const raw = localStorage.getItem(AUTH_SESSION_KEY);
-        return raw ? JSON.parse(raw) : null;
+        const session = raw ? JSON.parse(raw) : null;
+        if (session) {
+            console.log('[auth] Read session from localStorage:', {
+                masterUid: session.masterUid,
+                masterId: session.masterId,
+                shopId: session.shopId,
+                role: session.role
+            });
+        }
+        return session;
     } catch (_error) {
+        console.error('[auth] Failed to read session:', _error);
         return null;
     }
 }
 
 function writeAuthSession(session) {
     if (!session) {
+        console.log('[auth] Clearing session');
         localStorage.removeItem(AUTH_SESSION_KEY);
         return null;
     }
+    console.log('[auth] Saving session:', {
+        masterUid: session.masterUid,
+        masterId: session.masterId,
+        shopId: session.shopId,
+        role: session.role
+    });
     localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
     return session;
 }
 
 function buildAuthHeaders() {
     const session = readAuthSession();
-    if (!session?.masterUid) return {};
+    if (!session?.masterUid) {
+        console.warn('[auth] No session or masterUid found:', session);
+        return {};
+    }
 
-    return {
-        'x-master-id': session.masterUid,
-        'x-master-uid': session.masterUid,
+    const headers = {
+        'x-master-id': session.masterUid || session.masterId || '',
+        'x-master-uid': session.masterUid || session.masterId || '',
         'x-shop-id': session.shopId || '',
         'x-role': session.role || 'master'
     };
+    
+    console.log('[auth] Built headers:', {
+        'x-master-uid': headers['x-master-uid'],
+        'x-shop-id': headers['x-shop-id'],
+        'x-role': headers['x-role']
+    });
+    
+    return headers;
 }
 
 async function apiRequest(path, options = {}) {
