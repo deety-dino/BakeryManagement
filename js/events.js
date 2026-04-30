@@ -220,7 +220,7 @@ if (confirmDeductionBtn) confirmDeductionBtn.onclick = async () => {
     const id = parseInt(document.getElementById('prodSelect').value);
     const qty = parseInt(document.getElementById('prodQty').value);
     const recipe = userRecipes.find(r => r.id === id);
-    const result = produceProduct(recipe, qty);
+    const result = await produceProduct(recipe, qty);
     if (result.success) {
         alert(`✅ Sản xuất thành công ${qty} ${recipe.name}`);
         renderAll();
@@ -248,14 +248,10 @@ if (recordSaleBtn) recordSaleBtn.onclick = async () => {
         alert('Không thể tính cost');
         return;
     }
-    userSalesHistory.push({
-        productName: recipe.name,
-        quantity: qty,
-        sellPrice: price,
-        costPerUnit: cost,
-        totalRevenue: price * qty,
-        totalCost: cost * qty,
-        date: new Date().toLocaleString()
+    await window.dbApi.addSale({
+        productId: id,
+        quantitySold: qty,
+        actualSalePrice: price
     });
     await saveAllData();
     renderProfitReport();
@@ -265,7 +261,7 @@ if (recordSaleBtn) recordSaleBtn.onclick = async () => {
 const resetSalesBtn = document.getElementById('resetSalesBtn');
 if (resetSalesBtn) resetSalesBtn.onclick = async () => {
     if (confirm('Xóa lịch sử bán?')) {
-        userSalesHistory = [];
+        await window.dbApi.resetSales();
         await saveAllData();
         renderProfitReport();
     }
@@ -274,9 +270,7 @@ if (resetSalesBtn) resetSalesBtn.onclick = async () => {
 const resetDemoBtn = document.getElementById('resetDemoBtn');
 if (resetDemoBtn) resetDemoBtn.onclick = async () => {
     if (confirm('Reset dữ liệu mẫu?')) {
-        userIngredients = getSampleIngredients();
-        userRecipes = getSampleRecipes();
-        userSalesHistory = [];
+        await window.dbApi.resetDemo();
         await saveAllData();
         renderAll();
     }

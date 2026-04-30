@@ -1,6 +1,7 @@
+USE railway;
 -- Id trigger
 DELIMITER //
-CREATE TRIGGER IF NOT EXISTS before_insert_daily_productions
+CREATE TRIGGER before_insert_daily_productions
     BEFORE INSERT ON daily_productions
     FOR EACH ROW
 BEGIN
@@ -11,12 +12,12 @@ END;
 //
 DELIMITER ;
 DELIMITER //
-CREATE TRIGGER IF NOT EXISTS before_insert_daily_sales
+CREATE TRIGGER before_insert_daily_sales
     BEFORE INSERT ON daily_sales
     FOR EACH ROW
 BEGIN
     SET NEW.id = (SELECT IFNULL(MAX(id), 0) + 1
-                  FROM daily_productions
+                  FROM daily_sales
                   WHERE shop_id = NEW.shop_id);
 END;
 //
@@ -24,7 +25,7 @@ DELIMITER ;
 -- Stock trigger (auto update)
 DELIMITER $$
 
-CREATE TRIGGER IF NOT EXISTS trg_ingredients_ai_create_shop_stock
+CREATE TRIGGER trg_ingredients_ai_create_shop_stock
     AFTER INSERT ON ingredients
     FOR EACH ROW
 BEGIN
@@ -32,13 +33,13 @@ BEGIN
     SELECT s.shop_id, NEW.id
     FROM shop s
     WHERE s.master_id = NEW.master_id
-    ON DUPLICATE KEY UPDATE shop_id = s.shop_id, ingredient_id = NEW.id;
+    ON DUPLICATE KEY UPDATE quantity = quantity;
 END$$
 
 DELIMITER ;
 DELIMITER //
 
-CREATE TRIGGER IF NOT EXISTS trg_after_import
+CREATE TRIGGER trg_after_import
     AFTER INSERT ON ingredient_imports
     FOR EACH ROW
 BEGIN
@@ -47,7 +48,7 @@ BEGIN
     ON DUPLICATE KEY UPDATE quantity = quantity + NEW.quantity;
 END //
 
-CREATE TRIGGER IF NOT EXISTS trg_after_production
+CREATE TRIGGER trg_after_production
     AFTER INSERT ON daily_productions
     FOR EACH ROW
 BEGIN
@@ -61,7 +62,7 @@ BEGIN
     ON DUPLICATE KEY UPDATE quantity = quantity + NEW.quantity_produced;
 END //
 
-CREATE TRIGGER IF NOT EXISTS trg_after_sales
+CREATE TRIGGER trg_after_sales
     AFTER INSERT ON daily_sales
     FOR EACH ROW
 BEGIN

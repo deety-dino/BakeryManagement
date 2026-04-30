@@ -1,7 +1,13 @@
 let currentUserId = null;
+let currentMasterId = '';
+let currentMasterName = '';
+let currentShopId = '';
+let currentShopName = '';
+let currentAuthMode = 'master';
 let userIngredients = [];
 let userRecipes = [];
 let userSalesHistory = [];
+let windowDbSnapshot = null;
 
 function getSampleIngredients() {
     return [

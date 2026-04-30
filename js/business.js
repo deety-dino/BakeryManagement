@@ -1,15 +1,23 @@
-function addIngredient(name, qty, price, unit) {
-    const existing = userIngredients.find(i => i.name.toLowerCase() === name.toLowerCase());
-    const pricePerGram = price / qty;
-    if (existing) {
-        const oldCost = existing.quantity * existing.pricePerUnit;
-        const newCost = oldCost + (qty * pricePerGram);
-        existing.quantity += qty;
-        existing.pricePerUnit = newCost / existing.quantity;
-    } else {
-        userIngredients.push({ id: Date.now(), name, quantity: qty, unit, pricePerUnit: pricePerGram });
+async function addIngredient(name, qty, price, unit) {
+    if (!window.dbApi) {
+        throw new Error('Thiếu cấu hình API');
     }
-    saveAllData();
+
+    const created = await window.dbApi.addIngredient({
+        name,
+        category: '',
+        unit
+    });
+
+    if (Number.isFinite(qty) && Number.isFinite(price) && qty > 0 && price > 0) {
+        await window.dbApi.addIngredientImport({
+            ingredientId: created.id,
+            quantity: qty,
+            unitPrice: price / qty
+        });
+    }
+
+    await saveAllData();
     return true;
 }
 
@@ -18,12 +26,12 @@ function getProductCost(recipe) {
     for (let [ingName, gram] of Object.entries(recipe.ingredients)) {
         const ing = userIngredients.find(i => i.name === ingName);
         if (!ing) return null;
-        cost += gram * ing.pricePerUnit;
+        cost += gram * Number(ing.avg_unit_price_month || 0);
     }
     return cost;
 }
 
-function produceProduct(recipe, quantity) {
+async function produceProduct(recipe, quantity) {
     const needed = {};
     for (let [ing, gram] of Object.entries(recipe.ingredients)) needed[ing] = gram * quantity;
 
@@ -33,11 +41,12 @@ function produceProduct(recipe, quantity) {
             return { success: false, shortages: Object.keys(needed) };
         }
     }
-    for (let [ing, need] of Object.entries(needed)) {
-        const stock = userIngredients.find(i => i.name === ing);
-        stock.quantity -= need;
-    }
-    saveAllData();
+
+    await window.dbApi.addProduction({
+        productId: recipe.id,
+        quantityProduced: quantity
+    });
+    await saveAllData();
     return { success: true };
 }
 

@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>BakeManage - Shop Management</title>
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/shop-management.css">
+</head>
+<body>
+    <div id="shopManagementApp" class="shop-management-app" style="display:block;">
+        <div class="container">
+            <div class="app-header">
+                <div>
+                    <h1>🏪 Quản lý Chi nhánh</h1>
+                    <div class="sub">Quản lý chi nhánh, nguyên liệu và công thức</div>
+                </div>
+                <div class="user-info">
+                    <span>👤 <span id="currentUser"></span></span>
+                    <button class="logout-btn" onclick="logout()">Đăng xuất</button>
+                </div>
+            </div>
+
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="shops">🏪 Chi nhánh</button>
+                <button class="tab-btn" data-tab="ingredients-mgmt">🥄 Nguyên liệu</button>
+                <button class="tab-btn" data-tab="recipes-mgmt">📝 Công thức</button>
+            </div>
+
+            <!-- Tab: Quản lý Chi nhánh -->
+            <div id="shops" class="tab-pane active">
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3 style="margin:0;">➕ Thêm Chi nhánh Mới</h3>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-top:15px;">
+                        <div>
+                            <label>Shop ID</label>
+                            <input type="text" id="newShopId" placeholder="Mã chi nhánh" required>
+                        </div>
+                        <div>
+                            <label>Tên Chi nhánh</label>
+                            <input type="text" id="newShopName" placeholder="Tên chi nhánh" required>
+                        </div>
+                        <div>
+                            <label>Mật khẩu Administrator</label>
+                            <input type="password" id="newAdminPassword" placeholder="Mật khẩu Admin" required>
+                        </div>
+                        <div>
+                            <label>Mật khẩu Staff</label>
+                            <input type="password" id="newStaffPassword" placeholder="Mật khẩu Staff" required>
+                        </div>
+                    </div>
+                    <button id="addNewShopBtn" style="margin-top:15px; width:100%;">✅ Thêm Chi nhánh</button>
+                </div>
+
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+                        <h3 style="margin:0;">📋 Danh sách Chi nhánh</h3>
+                        <button id="toggleShopSecretsBtn" type="button" class="btn-outline">🔐 Hiện thông tin</button>
+                    </div>
+                    <div id="shopsLoading" class="loading">Đang tải...</div>
+                    <table id="shopsTable" style="display:none;">
+                        <thead>
+                            <tr>
+                                <th>Shop ID</th>
+                                <th>Tên Chi nhánh</th>
+                                <th>Mật khẩu Admin</th>
+                                <th>Mật khẩu Staff</th>
+                                <th style="width:120px;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div id="shopEditModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999;">
+                    <div style="max-width:600px; margin:60px auto; background:#fff; border-radius:12px; padding:20px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                            <h3 id="shopEditTitle" style="margin:0;">Chỉnh sửa Chi nhánh</h3>
+                            <button id="closeShopModalBtn" type="button" style="background:none; border:none; color:#666; font-size:24px; cursor:pointer;">✖</button>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                            <div>
+                                <label>Shop ID</label>
+                                <input type="text" id="editShopId" readonly>
+                            </div>
+                            <div>
+                                <label>Tên Chi nhánh</label>
+                                <input type="text" id="editShopName">
+                            </div>
+                            <div>
+                                <label>Mật khẩu Administrator</label>
+                                <input type="password" id="editAdminPassword">
+                            </div>
+                            <div>
+                                <label>Mật khẩu Staff</label>
+                                <input type="password" id="editStaffPassword">
+                            </div>
+                        </div>
+                        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+                            <button id="deleteShopBtn" style="background:#c62828;">🗑️ Xóa</button>
+                            <button id="saveShopBtn" style="background:#2e7d32;">💾 Lưu</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Quản lý Nguyên liệu -->
+            <div id="ingredients-mgmt" class="tab-pane">
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3 style="margin:0;">➕ Thêm Nguyên liệu Mới</h3>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:15px; margin-top:15px;">
+                        <div>
+                            <label>Tên Nguyên liệu</label>
+                            <input type="text" id="newIngredientName" placeholder="Tên nguyên liệu" required>
+                        </div>
+                        <div>
+                            <label>Danh mục</label>
+                            <select id="newIngredientCategory">
+                                <option value="">-- Chọn danh mục --</option>
+                                <option value="Bột">Bột</option>
+                                <option value="Đường">Đường</option>
+                                <option value="Trứng">Trứng</option>
+                                <option value="Bơ">Bơ</option>
+                                <option value="Sữa">Sữa</option>
+                                <option value="Nước">Nước</option>
+                                <option value="Hương liệu">Hương liệu</option>
+                                <option value="Khác">Khác</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Đơn vị</label>
+                            <input type="text" id="newIngredientUnit" placeholder="g, ml, kg..." required>
+                        </div>
+                    </div>
+                    <button id="addNewIngredientBtn" style="margin-top:15px; width:100%;">✅ Thêm Nguyên liệu</button>
+                </div>
+
+                <div class="card">
+                    <h3>📦 Danh sách Nguyên liệu</h3>
+                    <div id="ingredientsLoadingMgmt" class="loading">Đang tải...</div>
+                    <table id="ingredientsMgmtTable" style="display:none;">
+                        <thead>
+                            <tr>
+                                <th>Tên</th>
+                                <th>Danh mục</th>
+                                <th>Đơn vị</th>
+                                <th style="width:120px;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div id="ingredientEditModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999;">
+                    <div style="max-width:600px; margin:60px auto; background:#fff; border-radius:12px; padding:20px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                            <h3 id="ingredientEditTitle" style="margin:0;">Chỉnh sửa Nguyên liệu</h3>
+                            <button id="closeIngredientModalBtn" type="button" style="background:none; border:none; color:#666; font-size:24px; cursor:pointer;">✖</button>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                            <div>
+                                <label>Tên Nguyên liệu</label>
+                                <input type="text" id="editIngredientName">
+                            </div>
+                            <div>
+                                <label>Danh mục</label>
+                                <select id="editIngredientCategory">
+                                    <option value="">-- Chọn danh mục --</option>
+                                    <option value="Bột">Bột</option>
+                                    <option value="Đường">Đường</option>
+                                    <option value="Trứng">Trứng</option>
+                                    <option value="Bơ">Bơ</option>
+                                    <option value="Sữa">Sữa</option>
+                                    <option value="Nước">Nước</option>
+                                    <option value="Hương liệu">Hương liệu</option>
+                                    <option value="Khác">Khác</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>Đơn vị</label>
+                                <input type="text" id="editIngredientUnit">
+                            </div>
+                        </div>
+                        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+                            <button id="deleteIngredientBtn" style="background:#c62828;">🗑️ Xóa</button>
+                            <button id="saveIngredientBtn" style="background:#2e7d32;">💾 Lưu</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Quản lý Công thức -->
+            <div id="recipes-mgmt" class="tab-pane">
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3 style="margin:0;">➕ Thêm Công thức Mới</h3>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-top:15px;">
+                        <div>
+                            <label>Tên Công thức</label>
+                            <input type="text" id="newRecipeName" placeholder="Tên công thức" required>
+                        </div>
+                        <div>
+                            <label>Danh mục</label>
+                            <select id="newRecipeCategory">
+                                <option value="">-- Chọn danh mục --</option>
+                                <option value="Bánh mì">Bánh mì</option>
+                                <option value="Bánh ngọt">Bánh ngọt</option>
+                                <option value="Bánh quy">Bánh quy</option>
+                                <option value="Bánh nhân">Bánh nhân</option>
+                                <option value="Khác">Khác</option>
+                            </select>
+                        </div>
+                        <div style="grid-column: 1/-1;">
+                            <label>Mô tả cách làm</label>
+                            <textarea id="newRecipeDescription" rows="3" placeholder="Mô tả chi tiết cách làm bánh"></textarea>
+                        </div>
+                    </div>
+                    <div>
+                        <label style="margin-top:15px;">📋 Nguyên liệu cần thiết</label>
+                        <div id="recipeIngredientsRows" style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+                            <div class="recipe-ingredient-row" style="display:grid; grid-template-columns:1fr 2fr 1fr auto; gap:10px; align-items:center;">
+                                <select class="recipeIngredientCategory" style="width:100%;">
+                                    <option value="">-- Chọn category --</option>
+                                    <option value="Bột">Bột</option>
+                                    <option value="Đường">Đường</option>
+                                    <option value="Trứng">Trứng</option>
+                                    <option value="Bơ">Bơ</option>
+                                    <option value="Sữa">Sữa</option>
+                                    <option value="Nước">Nước</option>
+                                    <option value="Hương liệu">Hương liệu</option>
+                                    <option value="Khác">Khác</option>
+                                </select>
+                                <select class="recipeIngredient" style="width:100%;">
+                                    <option value="">-- Chọn nguyên liệu --</option>
+                                </select>
+                                <input type="number" class="recipeIngQuantity" placeholder="Số lượng" step="0.01" style="width:100%;">
+                                <button type="button" style="visibility:hidden;">🗑️</button>
+                            </div>
+                        </div>
+                    </div>
+                    <button id="addRecipeIngredientRowBtn" style="margin-top:10px;">➕ Thêm nguyên liệu</button>
+                    <button id="addNewRecipeBtn" style="margin-top:15px; width:100%; background:#2e7d32;">✅ Thêm Công thức</button>
+                </div>
+
+                <div class="card">
+                    <h3>📖 Danh sách Công thức</h3>
+                    <div id="recipesMgmtLoading" class="loading">Đang tải...</div>
+                    <table id="recipesMgmtTable" style="display:none;">
+                        <thead>
+                            <tr>
+                                <th>Tên Công thức</th>
+                                <th>Danh mục</th>
+                                <th>Số lượng Nguyên liệu</th>
+                                <th style="width:120px;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div id="recipeEditModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999;">
+                    <div style="max-width:700px; margin:40px auto; background:#fff; border-radius:12px; padding:20px; max-height:80vh; overflow-y:auto;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                            <h3 id="recipeEditTitle" style="margin:0;">Chỉnh sửa Công thức</h3>
+                            <button id="closeRecipeModalBtn" type="button" style="background:none; border:none; color:#666; font-size:24px; cursor:pointer;">✖</button>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                            <div>
+                                <label>Tên Công thức</label>
+                                <input type="text" id="editRecipeName">
+                            </div>
+                            <div>
+                                <label>Danh mục</label>
+                                <select id="editRecipeCategory">
+                                    <option value="">-- Chọn danh mục --</option>
+                                    <option value="Bánh mì">Bánh mì</option>
+                                    <option value="Bánh ngọt">Bánh ngọt</option>
+                                    <option value="Bánh quy">Bánh quy</option>
+                                    <option value="Bánh nhân">Bánh nhân</option>
+                                    <option value="Khác">Khác</option>
+                                </select>
+                            </div>
+                            <div style="grid-column: 1/-1;">
+                                <label>Mô tả cách làm</label>
+                                <textarea id="editRecipeDescription" rows="3"></textarea>
+                            </div>
+                        </div>
+                        <div>
+                            <label style="margin-top:15px;">📋 Nguyên liệu cần thiết</label>
+                            <div id="editRecipeIngredientsRows" style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+                                <div class="edit-recipe-ingredient-row" style="display:grid; grid-template-columns:1fr 2fr 1fr auto; gap:10px; align-items:center;">
+                                    <select class="editRecipeIngredientCategory" style="width:100%;">
+                                        <option value="">-- Chọn category --</option>
+                                        <option value="Bột">Bột</option>
+                                        <option value="Đường">Đường</option>
+                                        <option value="Trứng">Trứng</option>
+                                        <option value="Bơ">Bơ</option>
+                                        <option value="Sữa">Sữa</option>
+                                        <option value="Nước">Nước</option>
+                                        <option value="Hương liệu">Hương liệu</option>
+                                        <option value="Khác">Khác</option>
+                                    </select>
+                                    <select class="editRecipeIngredient" style="width:100%;">
+                                        <option value="">-- Chọn nguyên liệu --</option>
+                                    </select>
+                                    <input type="number" class="editRecipeIngQuantity" placeholder="Số lượng" step="0.01" style="width:100%;">
+                                    <button type="button" style="visibility:hidden;">🗑️</button>
+                                </div>
+                            </div>
+                        </div>
+                        <button id="addEditRecipeIngredientRowBtn" style="margin-top:10px;">➕ Thêm nguyên liệu</button>
+                        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+                            <button id="deleteRecipeBtn" style="background:#c62828;">🗑️ Xóa</button>
+                            <button id="saveRecipeBtn" style="background:#2e7d32;">💾 Lưu</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/firebase-config.js"></script>
+    <script src="../js/state.js"></script>
+    <script src="../js/data.js"></script>
+    <script src="../js/business.js"></script>
+    <script src="../js/ui.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/shop-management.js"></script>
+</body>
+</html>

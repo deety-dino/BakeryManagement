@@ -1,0 +1,35 @@
+<Solution>
+  <Folder Name="/cli/" />
+  <Folder Name="/cli/src/">
+    <File Path="index.html" />
+  </Folder>
+  <Folder Name="/cli/src/css/">
+    <File Path="css/base.css" />
+    <File Path="css/login-screen.css" />
+    <File Path="css/main-app.css" />
+  </Folder>
+  <Folder Name="/cli/src/html/">
+    <File Path="html/login-screen.html" />
+    <File Path="html/main-app.html" />
+  </Folder>
+  <Folder Name="/cli/src/img/" />
+  <Folder Name="/cli/src/js/">
+    <File Path="js/auth.js" />
+    <File Path="js/business.js" />
+    <File Path="js/data.js" />
+    <File Path="js/events.js" />
+    <File Path="js/firebase-config.js" />
+    <File Path="js/state.js" />
+    <File Path="js/ui.js" />
+  </Folder>
+  <Folder Name="/server/" />
+  <Folder Name="/server/MySQL/">
+    <File Path="server/MySQL/base.sql" />
+    <File Path="server/MySQL/console.sql" />
+    <File Path="server/MySQL/statistic_table.sql" />
+    <File Path="server/MySQL/trigger.sql" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path="HTMLPage1.html" />
+  </Folder>
+</Solution>

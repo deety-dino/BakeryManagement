@@ -52,9 +52,66 @@
     background: #a55d2e;
 }
 
+.login-choice {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.choice-btn {
+    background: #f7e5cf !important;
+    color: #7b4a2e !important;
+    border: 1px solid #e2c7aa !important;
+    border-radius: 18px !important;
+    margin-top: 0 !important;
+}
+
+.choice-btn.active {
+    background: #c47a44 !important;
+    color: #fff !important;
+    border-color: #c47a44 !important;
+}
+
+.login-panel {
+    display: none;
+}
+
+.login-panel.active {
+    display: block;
+}
+
+.panel-title {
+    font-weight: 700;
+    color: #7b4a2e;
+    margin-bottom: 6px;
+}
+
+.login-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.hint {
+    margin-top: 10px;
+    color: #8f6a4f;
+    font-size: 13px;
+    line-height: 1.45;
+    background: #fff8f0;
+    border: 1px solid #f0d5b0;
+    border-radius: 16px;
+    padding: 10px 12px;
+}
+
 .google-btn {
     background: #db4437 !important;
     margin-bottom: 10px;
+}
+
+.login-actions .google-btn,
+.login-actions button {
+    margin-top: 0;
 }
 
 .google-btn:hover {

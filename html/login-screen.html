@@ -4,9 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>BakeManage - Login</title>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <link rel="stylesheet" href="../css/base.css">
     <link rel="stylesheet" href="../css/login-screen.css">
 </head>
@@ -15,32 +12,35 @@
         <div class="login-box">
             <h2>🍰 BakeManage</h2>
 
-            <button id="googleLoginBtn" class="google-btn">
-                🚀 Đăng nhập bằng Google
-            </button>
-
-            <div class="divider">
-                <span>Hoặc</span>
+            <div id="loginChoice" class="login-choice">
+                <button type="button" class="choice-btn active" data-mode="admin" onclick="showAdminLogin()">Đăng nhập với quản trị viên</button>
+                <button type="button" class="choice-btn" data-mode="branch" onclick="showBranchLogin()">Đăng nhập với chi nhánh</button>
             </div>
 
-            <div id="loginForm">
-                <input type="email" id="loginEmail" placeholder="Email">
-                <input type="password" id="loginPassword" placeholder="Mật khẩu">
-                <button id="loginBtn">Đăng nhập</button>
-                <div class="switch-mode" onclick="showRegister()">Chưa có tài khoản? Đăng ký</div>
+            <div id="adminLoginForm" class="login-panel active">
+                <div class="panel-title">Quản trị viên</div>
+                <input type="text" id="loginMasterId" placeholder="master_id">
+                <input type="password" id="loginPassword" placeholder="password_hash">
+                <button id="loginAdminBtn">Đăng nhập Quản trị viên</button>
             </div>
 
-            <div id="registerForm" style="display:none;">
-                <input type="email" id="regEmail" placeholder="Email">
-                <input type="password" id="regPassword" placeholder="Mật khẩu (6+ ký tự)">
-                <button id="registerBtn">Đăng ký</button>
-                <div class="switch-mode" onclick="showLogin()">Đã có tài khoản? Đăng nhập</div>
+            <div id="branchLoginForm" class="login-panel">
+                <div class="panel-title">Chi nhánh</div>
+                <input type="text" id="branchMasterId" placeholder="master_id">
+                <input type="text" id="branchShopId" placeholder="shop_id">
+                <input type="password" id="branchPassword" placeholder="Mật khẩu chi nhánh">
+                <div class="login-actions">
+                    <button id="branchManagerBtn" class="google-btn">Đăng nhập Quản lý</button>
+                    <button id="branchStaffBtn">Đăng nhập Nhân viên</button>
+                </div>
+                <div class="hint">Quản lý dùng <b>administrator_password</b>, nhân viên dùng <b>staff_password</b>.</div>
             </div>
 
             <div id="authMessage" class="error-msg"></div>
         </div>
     </div>
 
+    <script src="../js/api.js"></script>
     <script src="../js/firebase-config.js"></script>
     <script src="../js/state.js"></script>
     <script src="../js/data.js"></script>

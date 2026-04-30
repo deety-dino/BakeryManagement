@@ -1,8 +1,7 @@
 USE railway;
-ALTER TABLE daily_sales MODIFY COLUMN id INT(5);
 CREATE TABLE ingredient_imports (
     id INT(5) PRIMARY KEY,
-    shop_id VARCHAR(10) NOT NULL,
+    shop_id VARCHAR(36) NOT NULL,
     ingredient_id INT NOT NULL,
     quantity DECIMAL(10) NOT NULL,
     import_price DECIMAL(10, 3) NOT NULL,
@@ -14,7 +13,7 @@ CREATE TABLE ingredient_imports (
 -- 6. Bảng Sản xuất bánh
 CREATE TABLE daily_productions (
     id INT(5),
-    shop_id VARCHAR(10) NOT NULL,
+    shop_id VARCHAR(36) NOT NULL,
     product_id INT NOT NULL,
     quantity_produced INT NOT NULL,
     production_date DATE DEFAULT (CURRENT_DATE),
@@ -26,7 +25,7 @@ CREATE TABLE daily_productions (
 -- 7. Bảng Bán hàng
 CREATE TABLE daily_sales (
     id INT(5) PRIMARY KEY,
-    shop_id VARCHAR(10) NOT NULL,
+    shop_id VARCHAR(36) NOT NULL,
     product_id INT NOT NULL,
     quantity_sold INT NOT NULL,
     actual_sale_price DECIMAL(10, 2) NOT NULL,
@@ -38,7 +37,7 @@ CREATE TABLE daily_sales (
 -- 8. Bảng Chi phí vận hành
 CREATE TABLE fixed_costs (
     id INT(4) PRIMARY KEY DEFAULT(UUID_SHORT()),
-    shop_id VARCHAR(20) NOT NULL,
+    shop_id VARCHAR(36) NOT NULL,
     cost_name VARCHAR(255) NOT NULL,
     amount DECIMAL(15, 2) NOT NULL,
     cost_date DATE DEFAULT (CURRENT_DATE),
@@ -46,7 +45,7 @@ CREATE TABLE fixed_costs (
 );
 
 CREATE TABLE IF NOT EXISTS ingredient_stock (
-    shop_id VARCHAR(10) NOT NULL,
+    shop_id VARCHAR(36) NOT NULL,
     ingredient_id INT(3) NOT NULL,
     quantity DECIMAL(10,1) DEFAULT 0,
     PRIMARY KEY (shop_id, ingredient_id),
@@ -56,7 +55,7 @@ CREATE TABLE IF NOT EXISTS ingredient_stock (
 
 -- 10. Tồn kho Bánh
 CREATE TABLE product_stock (
-    shop_id VARCHAR(10) NOT NULL,
+    shop_id VARCHAR(36) NOT NULL,
     product_id INT(3) NOT NULL,
     quantity INT DEFAULT 0,
     PRIMARY KEY (shop_id, product_id),
