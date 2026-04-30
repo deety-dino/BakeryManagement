@@ -1,9 +1,26 @@
 ﻿const AUTH_SESSION_KEY = 'bakemanage.authSession';
 
-// Detect if running in GitHub Pages (offline mode)
-const OFFLINE_MODE = !window.location.hostname.includes('localhost') && 
-                     !window.location.hostname.includes('127.0.0.1') &&
-                     !window.location.hostname.includes(':');
+function getApiBaseUrl() {
+    const configuredBaseUrl = window.BAKEMANAGE_API_BASE_URL || window.apiBaseUrl || '';
+    return String(configuredBaseUrl).trim().replace(/\/$/, '');
+}
+
+function isProbablyRelativePath(path) {
+    return typeof path === 'string' && path.startsWith('/');
+}
+
+function buildRequestUrl(path) {
+    const baseUrl = getApiBaseUrl();
+    if (baseUrl && isProbablyRelativePath(path)) {
+        return `${baseUrl}${path}`;
+    }
+    return path;
+}
+
+function shouldUseOfflineFallback(error) {
+    const hasBaseUrl = !!getApiBaseUrl();
+    return !hasBaseUrl && (window.location.protocol === 'file:' || error.message.includes('Failed to fetch'));
+}
 
 function readAuthSession() {
     try {
@@ -37,7 +54,7 @@ function buildAuthHeaders() {
 
 async function apiRequest(path, options = {}) {
     try {
-        const res = await fetch(path, {
+        const res = await fetch(buildRequestUrl(path), {
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
@@ -71,8 +88,8 @@ async function apiRequest(path, options = {}) {
         if (res.status === 204) return null;
         return res.json();
     } catch (error) {
-        // Fallback to mock data in offline mode
-        if (OFFLINE_MODE || error.message.includes('Failed to fetch')) {
+        // Fallback to mock data only when no backend URL is configured.
+        if (shouldUseOfflineFallback(error)) {
             return handleOfflineRequest(path, options);
         }
         throw error;
@@ -117,8 +134,15 @@ async function handleOfflineRequest(path, options = {}) {
 
     // Shop login
     if (path === '/api/auth/shop-login' && method === 'POST') {
-        const shop = findShop(shopIdValue);
+        let shop = findShop(shopIdValue);
         const master = findMaster(masterIdValue);
+        
+        // If shop_id not provided or not found, try to find the user's first shop
+        if (!shop && master && !shopIdValue) {
+            const data = getMockData();
+            shop = data.shops.find(s => s.master_uid === master.master_uid || s.master_id === master.master_id);
+        }
+        
         if (!shop || !master) {
             throw new Error('Chi nhánh hoặc master không tồn tại');
         }
@@ -146,11 +170,13 @@ async function handleOfflineRequest(path, options = {}) {
         const masterName = body?.masterName || body?.name || masterIdValue || 'Master User';
         const shopName = body?.shopName || 'Chi nhánh mặc định';
         const data = getMockData();
+        
         const existingMaster = data.masters.find(m => m.master_uid === masterIdValue || m.master_id === masterIdValue);
         if (existingMaster) {
             throw new Error('master_id đã tồn tại');
         }
 
+        // Create master
         const newMaster = {
             master_uid: masterIdValue,
             master_id: masterIdValue,
@@ -159,24 +185,32 @@ async function handleOfflineRequest(path, options = {}) {
         };
         data.masters.push(newMaster);
 
-        const createdShop = addShop({
-            master_uid: masterIdValue,
+        // Create default shop (inline to avoid double-save)
+        const maxShopNum = Math.max(...data.shops.map(s => parseInt(s.shop_id?.split('-')[1]) || 0), 0);
+        const newShopId = `shop-${String(maxShopNum + 1).padStart(3, '0')}`;
+        const newShop = {
+            shop_id: newShopId,
             shop_name: shopName,
+            master_uid: masterIdValue,
+            master_id: masterIdValue,
             administrator_password: passwordValue,
             staff_password: passwordValue
-        });
+        };
+        data.shops.push(newShop);
 
+        // Save once with both master and shop
         saveMockData(data);
+        
         const session = {
             masterUid: newMaster.master_uid,
             masterId: newMaster.master_id,
-            shopId: createdShop?.shop_id || '',
-            shopName: createdShop?.shop_name || shopName,
+            shopId: newShop.shop_id,
+            shopName: newShop.shop_name,
             role: 'master'
         };
 
         writeAuthSession(session);
-        return { success: true, session };
+        return { success: true, session, masterUid: newMaster.master_uid, masterId: newMaster.master_id, shopId: newShop.shop_id, shopName: newShop.shop_name };
     }
 
     // Get shops

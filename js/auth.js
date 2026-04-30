@@ -127,15 +127,23 @@ function handleRegisterStore() {
         recheckPassword: confirmPassword
     })
         .then((result) => {
+            const createdShopId = result?.shopId || result?.session?.shopId || '';
+            const createdMasterId = result?.masterId || result?.session?.masterId || masterId;
+            
             const session = {
-                masterUid: result?.session?.masterUid || result?.masterUid || masterId,
-                masterId: result?.session?.masterId || result?.masterId || masterId,
-                shopId: result?.session?.shopId || result?.shopId || '',
-                shopName: result?.session?.shopName || result?.shopName || shopName || 'Chi nhánh mặc định',
+                masterUid: result?.masterUid || result?.session?.masterUid || masterId,
+                masterId: createdMasterId,
+                shopId: createdShopId,
+                shopName: result?.shopName || result?.session?.shopName || shopName || 'Chi nhánh mặc định',
                 role: 'master'
             };
 
             writeSession(session);
+            
+            // Show created credentials so user can login as branch later
+            const credsMsg = `Tạo tài khoản thành công!\n\nThông tin chi nhánh:\nMaster ID: ${createdMasterId}\nShop ID: ${createdShopId}\nMật khẩu: ${password}\n\nBạn có thể dùng thông tin này để đăng nhập chi nhánh.`;
+            alert(credsMsg);
+            
             goToShopManagementPage();
         })
         .catch((error) => {

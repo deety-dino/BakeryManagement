@@ -60,6 +60,7 @@ Một ứng dụng web đơn trang (Single Page Application) để quản lý ho
 3. Chọn **Deploy from a branch**
 4. Chọn nhánh và thư mục (thường là `main` và root `/`)
 5. GitHub sẽ tự động deploy tại `https://username.github.io/repo-name`
+6. Nếu muốn kết nối tới backend/MySQL thật, mở [js/app-config.js](js/app-config.js) và đặt `window.BAKEMANAGE_API_BASE_URL` về URL backend đã deploy của bạn
 
 ## Thông Tin Đăng Nhập Demo
 
