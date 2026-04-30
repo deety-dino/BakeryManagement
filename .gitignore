@@ -1,0 +1,33 @@
+# IDE & Editor
+/.vs/
+/.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Node.js (Backend Server - Optional)
+/server/node_modules/
+/node_modules/
+npm-debug.log*
+package-lock.json
+
+# Build artifacts
+/dist/
+/build/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Browser cache
+.cache/
+
+# Logs
+*.log
+logs/
+
+# Optional: Keep server files but ignore runtime artifacts
+# /server/ # Uncomment if you want to exclude server folder completely
+
