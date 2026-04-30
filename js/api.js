@@ -84,6 +84,15 @@ async function handleOfflineRequest(path, options = {}) {
     // Simulate async delay
     await new Promise(resolve => setTimeout(resolve, 100));
 
+    // Ensure mock helpers are available when running in offline (GitHub Pages) mode.
+    if (typeof getMockData !== 'function') {
+        if (typeof initializeMockData === 'function') {
+            initializeMockData();
+        } else {
+            throw new Error('Offline mock functions missing — include js/data-mock.js before js/api.js');
+        }
+    }
+
     const method = options.method || 'GET';
     const body = options.body ? JSON.parse(options.body) : null;
 
