@@ -1,5 +1,43 @@
-﻿// BakeManage Authentication Module
-// Handles login, logout, and navigation for single-page application
+﻿function readSession() {
+    return window.dbApi?.getSession?.() || null;
+}
+
+function writeSession(session) {
+    return window.dbApi?.setSession?.(session);
+}
+
+function clearSession() {
+    return window.dbApi?.clearSession?.();
+}
+
+function isLoginPage() {
+    return !!document.getElementById('loginScreen') && !document.getElementById('mainApp') && !document.getElementById('shopManagementApp');
+}
+
+function isMainAppPage() {
+    return !!document.getElementById('mainApp') && !document.getElementById('loginScreen');
+}
+
+function isShopManagementPage() {
+    return !!document.getElementById('shopManagementApp') && !document.getElementById('loginScreen');
+}
+
+function pagePath(pageName) {
+    const path = window.location.pathname || '';
+    return path.includes('/html/') ? pageName : `html/${pageName}`;
+}
+
+function goToLoginPage() {
+    window.location.href = pagePath('login-screen.html');
+}
+
+function goToMainAppPage() {
+    window.location.href = pagePath('main-app.html');
+}
+
+function goToShopManagementPage() {
+    window.location.href = pagePath('shop-management.html');
+}
 
 function setAuthMessage(text) {
     const message = document.getElementById('authMessage');
@@ -34,351 +72,138 @@ window.showBranchLogin = function () {
     setActiveLoginMode('branch');
 };
 
-function showLoginScreen() {
+function ensureLoginVisible() {
     const loginScreen = document.getElementById('loginScreen');
-    const mainApp = document.getElementById('mainApp');
-    const shopManagementApp = document.getElementById('shopManagementApp');
-
-    if (loginScreen) loginScreen.style.display = 'block';
-    if (mainApp) mainApp.style.display = 'none';
-    if (shopManagementApp) shopManagementApp.style.display = 'none';
-    
+    if (loginScreen) loginScreen.style.display = 'flex';
     setActiveLoginMode('admin');
 }
 
-function showShopManagementApp() {
-    const loginScreen = document.getElementById('loginScreen');
-    const mainApp = document.getElementById('mainApp');
-    const shopManagementApp = document.getElementById('shopManagementApp');
-
-    if (loginScreen) loginScreen.style.display = 'none';
-    if (mainApp) mainApp.style.display = 'none';
-    if (shopManagementApp) shopManagementApp.style.display = 'block';
-    
-    // Load shop management UI
-    loadShopManagementUI();
-}
-
-function showMainApp() {
-    const loginScreen = document.getElementById('loginScreen');
-    const mainApp = document.getElementById('mainApp');
-    const shopManagementApp = document.getElementById('shopManagementApp');
-
-    if (loginScreen) loginScreen.style.display = 'none';
-    if (mainApp) mainApp.style.display = 'block';
-    if (shopManagementApp) shopManagementApp.style.display = 'none';
-}
-
-function getCurrentUser() {
-    const session = window.dbApi?.getSession?.();
-    return session?.masterId || session?.shopId || 'Unknown';
-}
-
 function updateCurrentUserDisplay() {
+    const session = readSession();
+    const user = session?.masterId || session?.shopId || '';
     const userSpan = document.getElementById('currentUser');
-    if (userSpan) {
-        userSpan.innerText = getCurrentUser();
-    }
+    if (userSpan) userSpan.innerText = user;
 }
 
-window.logout = function() {
-    window.dbApi?.clearSession?.();
-    showLoginScreen();
-    // Clear all form inputs
-    document.getElementById('loginMasterId').value = '';
-    document.getElementById('loginPassword').value = '';
-    document.getElementById('branchMasterId').value = '';
-    document.getElementById('branchShopId').value = '';
-    document.getElementById('branchPassword').value = '';
+window.logout = function () {
+    clearSession();
+    goToLoginPage();
 };
 
 async function handleAdminLogin() {
     const masterId = document.getElementById('loginMasterId')?.value?.trim();
     const password = document.getElementById('loginPassword')?.value?.trim();
 
-    if (!masterId) {
-        setAuthMessage('Vui lòng nhập master_id');
-        return;
-    }
-    if (!password) {
-        setAuthMessage('Vui lòng nhập mật khẩu');
+    if (!masterId || !password) {
+        setAuthMessage('Vui long nhap master_id va mat khau');
         return;
     }
 
     try {
-        setAuthMessage('Đang đăng nhập...');
-        await window.dbApi?.masterLogin?.({ masterId, password });
-        updateCurrentUserDisplay();
-        showShopManagementApp();
+        setAuthMessage('Dang dang nhap...');
+        const result = await window.dbApi?.masterLogin?.({ masterId, password });
+
+        const session = {
+            masterUid: result?.masterUid || result?.master_uid || masterId,
+            masterId: result?.masterId || result?.master_id || masterId,
+            role: 'admin'
+        };
+
+        writeSession(session);
+        goToShopManagementPage();
     } catch (error) {
-        setAuthMessage(`Lỗi: ${error.message || 'Đăng nhập thất bại'}`);
+        setAuthMessage(`Loi: ${error?.message || 'Dang nhap that bai'}`);
     }
 }
 
-async function handleBranchManagerLogin() {
+async function loginBranch(role) {
     const masterId = document.getElementById('branchMasterId')?.value?.trim();
     const shopId = document.getElementById('branchShopId')?.value?.trim();
     const password = document.getElementById('branchPassword')?.value?.trim();
 
     if (!masterId || !shopId || !password) {
-        setAuthMessage('Vui lòng điền đầy đủ thông tin');
+        setAuthMessage('Vui long dien day du thong tin');
         return;
     }
 
     try {
-        setAuthMessage('Đang đăng nhập...');
-        await window.dbApi?.shopLogin?.({ master_id: masterId, shop_id: shopId, password, role: 'admin' });
-        updateCurrentUserDisplay();
-        showShopManagementApp();
+        setAuthMessage('Dang dang nhap...');
+        const result = await window.dbApi?.shopLogin?.({
+            master_id: masterId,
+            shop_id: shopId,
+            password,
+            role
+        });
+
+        const session = {
+            masterUid: result?.masterUid || result?.master_uid || masterId,
+            masterId: result?.masterId || result?.master_id || masterId,
+            shopId: result?.shopId || result?.shop_id || shopId,
+            role
+        };
+
+        writeSession(session);
+
+        if (role === 'staff') {
+            goToMainAppPage();
+        } else {
+            goToShopManagementPage();
+        }
     } catch (error) {
-        setAuthMessage(`Lỗi: ${error.message || 'Đăng nhập thất bại'}`);
+        setAuthMessage(`Loi: ${error?.message || 'Dang nhap that bai'}`);
     }
 }
 
-async function handleBranchStaffLogin() {
-    const masterId = document.getElementById('branchMasterId')?.value?.trim();
-    const shopId = document.getElementById('branchShopId')?.value?.trim();
-    const password = document.getElementById('branchPassword')?.value?.trim();
-
-    if (!masterId || !shopId || !password) {
-        setAuthMessage('Vui lòng điền đầy đủ thông tin');
-        return;
-    }
-
-    try {
-        setAuthMessage('Đang đăng nhập...');
-        await window.dbApi?.shopLogin?.({ master_id: masterId, shop_id: shopId, password, role: 'staff' });
-        updateCurrentUserDisplay();
-        showMainApp();
-    } catch (error) {
-        setAuthMessage(`Lỗi: ${error.message || 'Đăng nhập thất bại'}`);
-    }
-}
-
-// Initialize auth UI on page load
-function initializeAuth() {
-    const session = window.dbApi?.getSession?.();
-    
-    // Set up button event listeners
+function bindLoginEvents() {
     const loginAdminBtn = document.getElementById('loginAdminBtn');
-    if (loginAdminBtn) {
-        loginAdminBtn.addEventListener('click', handleAdminLogin);
-    }
+    if (loginAdminBtn) loginAdminBtn.addEventListener('click', handleAdminLogin);
 
     const branchManagerBtn = document.getElementById('branchManagerBtn');
-    if (branchManagerBtn) {
-        branchManagerBtn.addEventListener('click', handleBranchManagerLogin);
-    }
+    if (branchManagerBtn) branchManagerBtn.addEventListener('click', () => loginBranch('admin'));
 
     const branchStaffBtn = document.getElementById('branchStaffBtn');
-    if (branchStaffBtn) {
-        branchStaffBtn.addEventListener('click', handleBranchStaffLogin);
-    }
+    if (branchStaffBtn) branchStaffBtn.addEventListener('click', () => loginBranch('staff'));
+}
 
-    // Check if user is already logged in
-    if (session?.masterUid) {
-        updateCurrentUserDisplay();
-        if (session.role === 'staff') {
-            showMainApp();
-        } else {
-            showShopManagementApp();
+function bootstrapAuth() {
+    const session = readSession();
+
+    if (isLoginPage()) {
+        bindLoginEvents();
+
+        if (!session?.masterUid) {
+            ensureLoginVisible();
+            return;
         }
-    } else {
-        showLoginScreen();
-    }
-}
 
-// Helper function to load shop management UI content from HTML if not already present
-function loadShopManagementUI() {
-    const shopApp = document.getElementById('shopManagementApp');
-    if (!shopApp || shopApp.querySelector('.shop-management-content')) {
-        return; // Already loaded
-    }
-
-    const html = `
-        <div class="shop-management-content" style="display:block;">
-            <div class="container">
-                <div class="app-header">
-                    <div>
-                        <h1>🏪 Quản lý Chi nhánh</h1>
-                        <div class="sub">Quản lý chi nhánh, nguyên liệu và công thức</div>
-                    </div>
-                    <div class="user-info">
-                        <span>👤 <span id="currentUserMgmt"></span></span>
-                        <button class="logout-btn" onclick="logout()">Đăng xuất</button>
-                    </div>
-                </div>
-
-                <div class="tabs">
-                    <button class="tab-btn active" data-tab="shops">🏪 Chi nhánh</button>
-                    <button class="tab-btn" data-tab="ingredients-mgmt">🥄 Nguyên liệu</button>
-                    <button class="tab-btn" data-tab="recipes-mgmt">📝 Công thức</button>
-                </div>
-
-                <div id="shops" class="tab-pane active"></div>
-                <div id="ingredients-mgmt" class="tab-pane"></div>
-                <div id="recipes-mgmt" class="tab-pane"></div>
-            </div>
-        </div>
-    `;
-
-    shopApp.innerHTML = html;
-    
-    // Update the current user display in the management app
-    const userSpan = shopApp.querySelector('#currentUserMgmt');
-    if (userSpan) {
-        userSpan.innerText = getCurrentUser();
-    }
-
-    // Initialize shop management if the function exists
-    if (typeof initializeShopManagement === 'function') {
-        initializeShopManagement();
-    }
-}
-
-// Check auth status on page load
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeAuth);
-} else {
-    initializeAuth();
-}
- {
-    setActiveLoginMode('admin');
-};
-
-window.showBranchLogin = function () {
-    setActiveLoginMode('branch');
-};
-
-async function applyAuthenticatedSession(session) {
-    window.dbApi.setSession(session);
-
-    if (isLoginOnlyPage()) {
-        goToMainPage();
+        if (session.role === 'staff') {
+            goToMainAppPage();
+        } else {
+            goToShopManagementPage();
+        }
         return;
     }
 
-    const { loginScreen, mainApp } = getAuthPageElements();
-    if (loginScreen) loginScreen.style.display = 'none';
-    if (mainApp) mainApp.style.display = 'block';
-    await loadUserData(session);
-}
-
-function getLoginPasswordValue() {
-    return document.getElementById('loginPassword')?.value.trim() || '';
-}
-
-function getBranchPasswordValue() {
-    return document.getElementById('branchPassword')?.value.trim() || '';
-}
-
-window.logout = async function () {
-    window.dbApi?.clearSession?.();
-    currentUserId = null;
-    currentMasterId = '';
-    currentMasterName = '';
-    currentShopId = '';
-    currentShopName = '';
-    userIngredients = [];
-    userRecipes = [];
-    userSalesHistory = [];
-    const loginScreen = document.getElementById('loginScreen');
-    const mainApp = document.getElementById('mainApp');
-    if (isMainOnlyPage()) {
+    if (!session?.masterUid) {
         goToLoginPage();
         return;
     }
-    if (loginScreen) loginScreen.style.display = 'flex';
-    if (mainApp) mainApp.style.display = 'none';
-};
 
-// ==================== MASTER LOGIN ====================
-document.getElementById('loginAdminBtn')?.addEventListener('click', async () => {
-    const masterId = (document.getElementById('loginMasterId')?.value || '').trim();
-    const password = getLoginPasswordValue();
-
-    if (!masterId || !password) {
-        setAuthMessage('Nhập master_id và mật khẩu');
+    if (isMainAppPage() && session.role !== 'staff') {
+        goToShopManagementPage();
         return;
     }
 
-    try {
-        const result = await window.dbApi.masterLogin({ masterId, password });
-        
-        const session = {
-            masterUid: result.masterUid || result.master_uid,
-            masterId: result.masterId || result.master_id,
-            masterName: result.masterName || result.master_name || '',
-            shopId: result.shopId || result.shop_id || '',
-            shopName: result.shopName || result.shop_name || '',
-            role: 'admin'
-        };
-        
-        await applyAuthenticatedSession(session);
-    } catch (error) {
-        setAuthMessage(error.message || 'Sai master_id hoặc mật khẩu');
-    }
-});
-
-// ==================== SHOP LOGIN ====================
-async function loginBranch(role) {
-    const masterId = (document.getElementById('branchMasterId')?.value || '').trim();
-    const shopId = (document.getElementById('branchShopId')?.value || '').trim();
-    const password = getBranchPasswordValue();
-
-    if (!masterId || !shopId || !password) {
-        setAuthMessage('Nhập master_id, shop_id và mật khẩu');
+    if (isShopManagementPage() && session.role === 'staff') {
+        goToMainAppPage();
         return;
     }
 
-    try {
-        const result = await window.dbApi.shopLogin({ masterId, shopId, role, password });
-
-        const session = {
-            masterUid: result.masterUid || result.master_uid,
-            masterId: result.masterId || result.master_id,
-            masterName: result.masterName || result.master_name || '',
-            shopId: result.shopId || result.shop_id,
-            shopName: result.shopName || result.shop_name,
-            role: role === 'admin' ? 'admin' : 'staff'
-        };
-
-        await applyAuthenticatedSession(session);
-    } catch (error) {
-        setAuthMessage(error.message || 'Sai thông tin chi nhánh');
-    }
+    updateCurrentUserDisplay();
 }
 
-document.getElementById('branchManagerBtn')?.addEventListener('click', async () => {
-    await loginBranch('admin');
-});
-
-document.getElementById('branchStaffBtn')?.addEventListener('click', async () => {
-    await loginBranch('staff');
-});
-
-// ==================== SESSION RESTORATION ====================
-async function restoreSessionOnLoad() {
-    const session = window.dbApi?.getSession?.();
-    
-    if (!session?.masterUid) {
-        if (isMainOnlyPage()) {
-            goToLoginPage();
-        }
-        return;
-    }
-
-    if (isLoginOnlyPage()) {
-        goToMainPage();
-        return;
-    }
-
-    const { loginScreen, mainApp } = getAuthPageElements();
-    if (loginScreen) loginScreen.style.display = 'none';
-    if (mainApp) mainApp.style.display = 'block';
-    await loadUserData(session);
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootstrapAuth);
+} else {
+    bootstrapAuth();
 }
-
-setActiveLoginMode('admin');
-
-restoreSessionOnLoad();
