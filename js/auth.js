@@ -208,8 +208,8 @@ async function loginBranch(role) {
     try {
         setAuthMessage('Dang dang nhap...');
         const result = await window.dbApi?.shopLogin?.({
-            master_id: masterId,
-            shop_id: shopId,
+            masterId,
+            shopId,
             password,
             role
         });
