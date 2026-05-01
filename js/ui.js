@@ -101,7 +101,7 @@ function renderImportsTable() {
         row.insertCell(0).innerText = item.import_date || '';
         row.insertCell(1).innerText = item.ingredient_name || '';
         row.insertCell(2).innerText = `${Number(item.quantity || 0).toFixed(2)} ${item.unit || ''}`;
-        row.insertCell(3).innerText = Number(item.unit_price || 0).toLocaleString() + ' đ';
+        row.insertCell(3).innerText = Number(item.total_money || item.unit_price || 0).toLocaleString() + ' đ';
     });
 }
 

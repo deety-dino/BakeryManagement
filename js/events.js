@@ -10,7 +10,7 @@ function createImportRow() {
             <option value="">-- Chọn nguyên liệu --</option>
         </select>
         <input type="number" class="ingQty" placeholder="Số lượng (g/ml)" style="width:100%;">
-        <input type="number" class="ingPrice" placeholder="Giá tiền (VNĐ)" style="width:100%;">
+        <input type="number" class="ingPrice" placeholder="Tổng tiền (VNĐ)" style="width:100%;">
         <button type="button" class="removeImportRowBtn">🗑️</button>
     `;
 
@@ -38,7 +38,7 @@ if (submitImportsBtn) submitImportsBtn.onclick = async () => {
         index,
         ingredientId: parseInt(row.querySelector('.ingName')?.value),
         quantity: parseFloat(row.querySelector('.ingQty')?.value),
-        unitPrice: parseFloat(row.querySelector('.ingPrice')?.value)
+        totalMoney: parseFloat(row.querySelector('.ingPrice')?.value)
     }));
 
     if (!items.length) {
@@ -47,7 +47,7 @@ if (submitImportsBtn) submitImportsBtn.onclick = async () => {
     }
 
     for (const item of items) {
-        if (!item.ingredientId || !item.quantity || !item.unitPrice) {
+        if (!item.ingredientId || !item.quantity || !item.totalMoney) {
             alert(`Dòng ${item.index + 1}: Nhập đầy đủ thông tin`);
             return;
         }
@@ -55,7 +55,7 @@ if (submitImportsBtn) submitImportsBtn.onclick = async () => {
 
     try {
         await window.dbApi.addIngredientImportsBatch({
-            items: items.map(({ ingredientId, quantity, unitPrice }) => ({ ingredientId, quantity, unitPrice }))
+            items: items.map(({ ingredientId, quantity, totalMoney }) => ({ ingredientId, quantity, totalMoney }))
         });
         await refreshIngredientTabData();
 

@@ -66,7 +66,7 @@
                         <input type="number" id="importQuantity" min="1" step="1" placeholder="VD: 25">
                     </div>
                     <div>
-                        <label for="importUnitPrice">Đơn giá</label>
+                        <label for="importUnitPrice">Tổng tiền</label>
                         <input type="number" id="importUnitPrice" min="0" step="1000" placeholder="VD: 145000">
                     </div>
                     <div>
@@ -74,7 +74,7 @@
                         <button id="addImportRowBtn" type="button" style="width: 100%;">➕ Thêm</button>
                     </div>
                 </div>
-                <div id="importHint" class="monitor-hint">Chọn danh mục, nguyên liệu, nhập số lượng và đơn giá, rồi nhấn "Thêm".</div>
+                <div id="importHint" class="monitor-hint">Chọn danh mục, nguyên liệu, nhập số lượng và tổng tiền, rồi nhấn "Thêm".</div>
 
                 <div style="margin-top: 20px;">
                     <h4 style="margin-top: 0;">Danh sách nhập hàng</h4>
@@ -84,7 +84,7 @@
                                 <tr>
                                     <th>Nguyên liệu</th>
                                     <th>Số lượng</th>
-                                    <th>Đơn giá</th>
+                                    <th>Tổng tiền</th>
                                     <th style="width: 80px;">Thao tác</th>
                                 </tr>
                             </thead>
@@ -113,7 +113,7 @@
                             <tr>
                                 <th>Nguyên liệu</th>
                                 <th>Số lượng nhập</th>
-                                <th>Đơn giá</th>
+                                <th>Tổng tiền</th>
                                 <th>Ngày nhập</th>
                             </tr>
                         </thead>
@@ -143,7 +143,7 @@
                                         <th>Nguyên liệu</th>
                                         <th>Tồn kho</th>
                                         <th>Đơn vị</th>
-                                        <th>Đơn giá</th>
+                                        <th>Đơn giá TB tháng</th>
                                     </tr>
                                 </thead>
                                 <tbody id="ingredientStockBody"></tbody>
@@ -241,6 +241,7 @@
     <div id="monitorToast" class="toast" role="status" aria-live="polite"></div>
 
     <script src="../js/app-config.js"></script>
+    <script src="../js/data-mock.js"></script>
     <script src="../js/api.js"></script>
     <script src="../js/auth.js"></script>
     <script>
@@ -362,7 +363,7 @@
                     <tr>
                         <td>${item.ingredientName}</td>
                         <td><strong>${Number(item.quantity).toLocaleString('vi-VN')}</strong></td>
-                        <td>${Number(item.unitPrice).toLocaleString('vi-VN')}</td>
+                        <td>${Number(item.totalMoney).toLocaleString('vi-VN')}</td>
                         <td>
                             <button type="button" class="btn-outline danger-outline" onclick="window.removeImportRow(${index})">🗑️ Xóa</button>
                         </td>
@@ -378,11 +379,12 @@
                 historyBody.innerHTML = recentImports.map((item) => {
                     const date = new Date(item.import_date);
                     const formattedDate = date.toLocaleDateString('vi-VN');
+                    const totalMoney = Number(item.total_money || item.unit_price || 0);
                     return `
                         <tr>
                             <td>${item.ingredient_name}</td>
                             <td><strong>${item.quantity}</strong></td>
-                            <td>${Number(item.unit_price || 0).toLocaleString('vi-VN')}</td>
+                            <td>${totalMoney.toLocaleString('vi-VN')}</td>
                             <td>${formattedDate}</td>
                         </tr>
                     `;
@@ -422,7 +424,10 @@
 
                 if (ingredientSummary) ingredientSummary.textContent = `${state.ingredients.length} mặt hàng`;
                 if (cakeSummary) cakeSummary.textContent = `${state.products.length} mặt hàng`;
-                if (metricIngredientCount) metricIngredientCount.textContent = state.ingredients.reduce((sum, item) => sum + Number(item.quantity || 0), 0).toLocaleString('vi-VN');
+                if (metricIngredientCount) {
+                    const stockedIngredients = state.ingredients.filter((item) => Number(item.quantity || 0) > 0).length;
+                    metricIngredientCount.textContent = `${stockedIngredients}/${state.ingredients.length}`;
+                }
                 if (metricCakeCount) metricCakeCount.textContent = state.products.reduce((sum, item) => sum + Number(item.quantity || 0), 0).toLocaleString('vi-VN');
                 if (metricEmployeeCount) metricEmployeeCount.textContent = '0';
             }
@@ -441,10 +446,10 @@
                 const ingredientOption = importIngredient?.options[importIngredient.selectedIndex];
                 const ingredientName = ingredientOption?.dataset.name || ingredientOption?.textContent || '';
                 const quantity = Number(importQuantity?.value);
-                const unitPrice = Number(importUnitPrice?.value);
+                const totalMoney = Number(importUnitPrice?.value);
 
-                if (!ingredientId || !quantity || !unitPrice) {
-                    showToast('Vui lòng chọn nguyên liệu, nhập số lượng và đơn giá.');
+                if (!ingredientId || !quantity || !totalMoney) {
+                    showToast('Vui lòng chọn nguyên liệu, nhập số lượng và tổng tiền.');
                     return;
                 }
 
@@ -452,7 +457,7 @@
                     ingredientId,
                     ingredientName,
                     quantity,
-                    unitPrice
+                    totalMoney
                 });
 
                 importIngredient.value = '';
@@ -476,7 +481,7 @@
                             items: state.importList.map(item => ({
                                 ingredientId: item.ingredientId,
                                 quantity: item.quantity,
-                                unitPrice: item.unitPrice
+                                totalMoney: item.totalMoney
                             }))
                         })
                     });

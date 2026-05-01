@@ -13,7 +13,7 @@ async function addIngredient(name, qty, price, unit) {
         await window.dbApi.addIngredientImport({
             ingredientId: created.id,
             quantity: qty,
-            unitPrice: price / qty
+            totalMoney: price
         });
     }
 

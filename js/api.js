@@ -325,14 +325,19 @@ async function handleOfflineRequest(path, options = {}) {
     // Get ingredient stock (mock)
     if (path === '/api/ingredient-stock' && method === 'GET') {
         const data = getMockData();
-        return (data.ingredientStock || data.ingredients || []).map(item => ({
+        const stockRows = Array.isArray(data.ingredientStock) ? data.ingredientStock : [];
+        const stockMap = new Map(stockRows.map(item => [String(item.ingredient_id ?? item.ingredientId ?? item.id), item]));
+        return (data.ingredients || []).map(item => {
+            const stock = stockMap.get(String(item.id)) || {};
+            return ({
             ingredient_id: item.id,
             name: item.name,
             category: item.category,
             unit: item.unit,
-            quantity: item.qty || 0,
+            quantity: Number(stock.quantity ?? stock.qty ?? item.qty ?? 0),
             avg_unit_price_month: 0
-        }));
+            });
+        });
     }
 
     // Get product stock (mock)
@@ -356,7 +361,10 @@ async function handleOfflineRequest(path, options = {}) {
             ingredient_id: item.ingredientId,
             ingredient_name: item.ingredientName,
             quantity: item.quantity,
-            unit_price: item.unitPrice,
+            total_money: item.totalMoney ?? item.unitPrice ?? 0,
+            unit_price: Number(item.quantity || 0) > 0
+                ? Number(item.totalMoney ?? item.unitPrice ?? 0) / Number(item.quantity || 0)
+                : 0,
             import_date: item.date || new Date().toISOString().split('T')[0]
         }));
     }
@@ -370,7 +378,10 @@ async function handleOfflineRequest(path, options = {}) {
             ingredientId: body?.ingredientId,
             ingredientName: data.ingredients?.find(i => i.id === body?.ingredientId)?.name || '',
             quantity: body?.quantity,
-            unitPrice: body?.unitPrice,
+            totalMoney: body?.totalMoney ?? body?.total_money ?? body?.unitPrice,
+            unitPrice: Number(body?.quantity || 0) > 0
+                ? Number(body?.totalMoney ?? body?.unitPrice ?? 0) / Number(body?.quantity || 0)
+                : 0,
             date: new Date().toISOString().split('T')[0]
         };
         data.imports.push(newImport);
@@ -390,7 +401,10 @@ async function handleOfflineRequest(path, options = {}) {
                 ingredientId: item.ingredientId,
                 ingredientName: ingredient?.name || '',
                 quantity: item.quantity,
-                unitPrice: item.unitPrice,
+                totalMoney: item.totalMoney ?? item.total_money ?? item.unitPrice,
+                unitPrice: Number(item.quantity || 0) > 0
+                    ? Number(item.totalMoney ?? item.unitPrice ?? 0) / Number(item.quantity || 0)
+                    : 0,
                 date: new Date().toISOString().split('T')[0]
             });
         });

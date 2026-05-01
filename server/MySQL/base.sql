@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS products (
     UNIQUE KEY uq_products_master_name (master_id, name),
     CONSTRAINT fk_products_master FOREIGN KEY (master_id) REFERENCES master(master_uid) ON DELETE CASCADE
 );
-
+ALTER TABLE recipes ADD COLUMN category VARCHAR(255);
 CREATE TABLE IF NOT EXISTS recipes (
     master_id VARCHAR(36) NOT NULL,
     product_id INT NOT NULL,

@@ -82,23 +82,27 @@ async function buildIngredientCatalog(masterUid) {
 
 async function buildIngredientStock(masterUid, shopId) {
     const [rows] = await pool.query(
-        `SELECT i.id AS ingredient_id,
-                i.name,
-                i.category,
-                i.unit,
-                COALESCE(s.quantity, 0) AS quantity,
-                COALESCE(agg.avg_unit_price_month, 0) AS avg_unit_price_month,
-                s.last_updated
-         FROM ingredients i
-         LEFT JOIN ingredient_stock s ON s.ingredient_id = i.id AND s.shop_id = ?
-         LEFT JOIN (
-            SELECT ingredient_id, AVG(import_price) AS avg_unit_price_month
-            FROM ingredient_imports
-            WHERE shop_id = ?
-              AND YEAR(import_date) = YEAR(CURDATE())
-              AND MONTH(import_date) = MONTH(CURDATE())
-            GROUP BY ingredient_id
-         ) agg ON agg.ingredient_id = i.id
+     `SELECT i.id AS ingredient_id,
+          i.name,
+          i.category,
+          i.unit,
+          COALESCE(s.quantity, 0) AS quantity,
+                COALESCE(agg.avg_unit_price_month, 0) AS avg_unit_price_month
+      FROM ingredients i
+      LEFT JOIN (
+          SELECT ingredient_id, quantity
+          FROM ingredient_stock
+          WHERE shop_id = ?
+      ) s ON s.ingredient_id = i.id
+      LEFT JOIN (
+          SELECT ingredient_id,
+              COALESCE(SUM(import_price) / NULLIF(SUM(quantity), 0), 0) AS avg_unit_price_month
+          FROM ingredient_imports
+          WHERE shop_id = ?
+            AND YEAR(import_date) = YEAR(CURDATE())
+            AND MONTH(import_date) = MONTH(CURDATE())
+          GROUP BY ingredient_id
+      ) agg ON agg.ingredient_id = i.id
          WHERE i.master_id = ?
          ORDER BY i.name ASC`,
         [shopId, shopId, masterUid]
@@ -123,7 +127,8 @@ async function buildIngredientImports(masterUid, shopId, fromDate = '', toDate =
         `SELECT ii.id,
                 ii.import_date,
                 ii.quantity,
-                ii.import_price AS unit_price,
+                ii.import_price AS total_money,
+                COALESCE(ii.import_price / NULLIF(ii.quantity, 0), 0) AS unit_price,
                 i.id AS ingredient_id,
                 i.name AS ingredient_name,
                 i.unit
@@ -153,7 +158,8 @@ async function buildRecipeList(masterUid) {
          LEFT JOIN recipes r ON r.product_id = p.id AND r.master_id = p.master_id
          LEFT JOIN ingredients i ON i.id = r.ingredient_id AND i.master_id = p.master_id
          LEFT JOIN (
-            SELECT ingredient_id, AVG(import_price) AS avg_unit_price
+                 SELECT ingredient_id,
+                     COALESCE(SUM(import_price) / NULLIF(SUM(quantity), 0), 0) AS avg_unit_price
             FROM ingredient_imports
             GROUP BY ingredient_id
          ) ip ON ip.ingredient_id = r.ingredient_id
@@ -217,7 +223,8 @@ async function buildSalesHistory(masterUid, shopId) {
                    SUM(r.quantity_needed * COALESCE(ip.avg_unit_price, 0)) AS cost_per_unit
             FROM recipes r
             LEFT JOIN (
-                SELECT ingredient_id, AVG(import_price) AS avg_unit_price
+                     SELECT ingredient_id,
+                         COALESCE(SUM(import_price) / NULLIF(SUM(quantity), 0), 0) AS avg_unit_price
                 FROM ingredient_imports
                 GROUP BY ingredient_id
             ) ip ON ip.ingredient_id = r.ingredient_id
@@ -257,7 +264,8 @@ async function buildProductStock(masterUid, shopId) {
                    SUM(r.quantity_needed * COALESCE(ip.avg_unit_price, 0)) AS cost_per_unit
             FROM recipes r
             LEFT JOIN (
-                SELECT ingredient_id, AVG(import_price) AS avg_unit_price
+                     SELECT ingredient_id,
+                         COALESCE(SUM(import_price) / NULLIF(SUM(quantity), 0), 0) AS avg_unit_price
                 FROM ingredient_imports
                 GROUP BY ingredient_id
             ) ip ON ip.ingredient_id = r.ingredient_id
@@ -838,6 +846,20 @@ app.get('/api/ingredients/catalog', async (_req, res) => {
     }
 });
 
+app.get('/api/ingredient-stock', async (req, res) => {
+    const masterUid = requireMaster(req, res);
+    if (!masterUid) return;
+    const shopId = requireShop(req, res);
+    if (!shopId) return;
+
+    try {
+        const rows = await buildIngredientStock(masterUid, shopId);
+        res.json(rows);
+    } catch (error) {
+        res.status(500).json({ error: error?.message || String(error) });
+    }
+});
+
 app.post('/api/ingredients', async (req, res) => {
     const masterUid = requireMaster(req, res);
     if (!masterUid) return;
@@ -928,7 +950,7 @@ app.post('/api/ingredient-imports', async (req, res) => {
     if (!shopId) return;
     const ingredientId = Number(req.body?.ingredientId);
     const quantity = Number(req.body?.quantity);
-    const unitPrice = Number(req.body?.unitPrice);
+    const totalMoney = Number(req.body?.totalMoney ?? req.body?.total_money ?? req.body?.unitPrice);
 
     if (!Number.isFinite(ingredientId) || ingredientId <= 0) {
         return res.status(400).json({ error: 'ingredientId không hợp lệ' });
@@ -936,8 +958,8 @@ app.post('/api/ingredient-imports', async (req, res) => {
     if (!Number.isFinite(quantity) || quantity <= 0) {
         return res.status(400).json({ error: 'quantity phải lớn hơn 0' });
     }
-    if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
-        return res.status(400).json({ error: 'unitPrice phải lớn hơn 0' });
+    if (!Number.isFinite(totalMoney) || totalMoney <= 0) {
+        return res.status(400).json({ error: 'totalMoney phải lớn hơn 0' });
     }
 
     const conn = await pool.getConnection();
@@ -955,7 +977,7 @@ app.post('/api/ingredient-imports', async (req, res) => {
         await conn.query(
             `INSERT INTO ingredient_imports (id, shop_id, ingredient_id, quantity, import_price)
              VALUES (?, ?, ?, ?, ?)`,
-            [nextImportId, shopId, ingredientId, quantity, unitPrice]
+            [nextImportId, shopId, ingredientId, quantity, totalMoney]
         );
 
         await conn.commit();
@@ -982,7 +1004,7 @@ app.post('/api/ingredient-imports/batch', async (req, res) => {
         index,
         ingredientId: Number(item?.ingredientId),
         quantity: Number(item?.quantity),
-        unitPrice: Number(item?.unitPrice)
+        totalMoney: Number(item?.totalMoney ?? item?.total_money ?? item?.unitPrice)
     }));
 
     for (const item of normalized) {
@@ -992,8 +1014,8 @@ app.post('/api/ingredient-imports/batch', async (req, res) => {
         if (!Number.isFinite(item.quantity) || item.quantity <= 0) {
             return res.status(400).json({ error: `Dòng ${item.index + 1}: quantity phải lớn hơn 0` });
         }
-        if (!Number.isFinite(item.unitPrice) || item.unitPrice <= 0) {
-            return res.status(400).json({ error: `Dòng ${item.index + 1}: unitPrice phải lớn hơn 0` });
+        if (!Number.isFinite(item.totalMoney) || item.totalMoney <= 0) {
+            return res.status(400).json({ error: `Dòng ${item.index + 1}: totalMoney phải lớn hơn 0` });
         }
     }
 
@@ -1013,7 +1035,7 @@ app.post('/api/ingredient-imports/batch', async (req, res) => {
             await conn.query(
                 `INSERT INTO ingredient_imports (id, shop_id, ingredient_id, quantity, import_price)
                  VALUES (?, ?, ?, ?, ?)`,
-                [nextImportId + item.index, shopId, item.ingredientId, item.quantity, item.unitPrice]
+                [nextImportId + item.index, shopId, item.ingredientId, item.quantity, item.totalMoney]
             );
         }
 
@@ -1502,7 +1524,7 @@ app.post('/api/demo/reset', async (req, res) => {
             await conn.query(
                 `INSERT INTO ingredient_imports (id, shop_id, ingredient_id, quantity, import_price)
                  VALUES (?, ?, ?, ?, ?)`,
-                [await getNextId(conn, 'ingredient_imports'), shopId, nextIngredientId, sample.quantity, sample.pricePerUnit]
+                [await getNextId(conn, 'ingredient_imports'), shopId, nextIngredientId, sample.quantity, sample.quantity * sample.pricePerUnit]
             );
         }
 
