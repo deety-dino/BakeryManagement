@@ -22,6 +22,10 @@ function isShopManagementPage() {
     return !!document.getElementById('shopManagementApp') && !document.getElementById('loginScreen');
 }
 
+function isMonitorPage() {
+    return !!document.getElementById('monitorApp') && !document.getElementById('loginScreen');
+}
+
 function pagePath(pageName) {
     const path = window.location.pathname || '';
     return path.includes('/html/') ? pageName : `html/${pageName}`;
@@ -33,6 +37,10 @@ function goToLoginPage() {
 
 function goToMainAppPage() {
     window.location.href = pagePath('main-app.html');
+}
+
+function goToMonitorPage() {
+    window.location.href = pagePath('monitor.html');
 }
 
 function goToShopManagementPage() {
@@ -141,7 +149,7 @@ function handleRegisterStore() {
             writeSession(session);
             
             // Show created credentials so user can login as branch later
-            const credsMsg = `Tạo tài khoản thành công!\n\nThông tin chi nhánh:\nMaster ID: ${createdMasterId}\nShop ID: ${createdShopId}\nMật khẩu: ${password}\n\nBạn có thể dùng thông tin này để đăng nhập chi nhánh.`;
+            const credsMsg = `Tạo tài khoản thành công!\n\nThông tin chi nhánh:\nMaster ID: ${createdMasterId}\nShop ID: ${result?.shopCode || 'main'}\nMật khẩu: ${password}\n\nBạn có thể dùng Shop ID này để đăng nhập chi nhánh.`;
             alert(credsMsg);
             
             goToShopManagementPage();
@@ -226,7 +234,7 @@ async function loginBranch(role) {
         if (role === 'staff') {
             goToMainAppPage();
         } else {
-            goToShopManagementPage();
+            goToMonitorPage();
         }
     } catch (error) {
         setAuthMessage(`Loi: ${error?.message || 'Dang nhap that bai'}`);
@@ -263,6 +271,8 @@ function bootstrapAuth() {
 
         if (session.role === 'staff') {
             goToMainAppPage();
+        } else if (session.shopId) {
+            goToMonitorPage();
         } else {
             goToShopManagementPage();
         }
@@ -275,7 +285,25 @@ function bootstrapAuth() {
     }
 
     if (isMainAppPage() && session.role !== 'staff') {
-        goToShopManagementPage();
+        if (session.shopId) {
+            goToMonitorPage();
+        } else {
+            goToShopManagementPage();
+        }
+        return;
+    }
+
+    if (isMonitorPage()) {
+        if (session.role === 'staff') {
+            goToMainAppPage();
+            return;
+        }
+
+        if (!session.shopId) {
+            goToShopManagementPage();
+            return;
+        }
+
         return;
     }
 

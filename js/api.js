@@ -118,6 +118,7 @@ async function apiRequest(path, options = {}) {
     } catch (error) {
         // Fallback to mock data only when no backend URL is configured.
         if (shouldUseOfflineFallback(error)) {
+            console.log('[api] Using offline fallback for:', path, 'Error was:', error.message);
             return handleOfflineRequest(path, options);
         }
         throw error;
@@ -311,11 +312,90 @@ async function handleOfflineRequest(path, options = {}) {
         return updateRecipe(recipeId, body);
     }
 
+    // Update recipe
+    
+
     // Delete recipe
     if (path.match(/\/api\/recipes\/[^/]+$/) && method === 'DELETE') {
         const recipeId = parseInt(path.split('/').pop());
         deleteRecipe(recipeId);
         return { success: true };
+    }
+
+    // Get ingredient stock (mock)
+    if (path === '/api/ingredient-stock' && method === 'GET') {
+        const data = getMockData();
+        return (data.ingredientStock || data.ingredients || []).map(item => ({
+            ingredient_id: item.id,
+            name: item.name,
+            category: item.category,
+            unit: item.unit,
+            quantity: item.qty || 0,
+            avg_unit_price_month: 0
+        }));
+    }
+
+    // Get product stock (mock)
+    if (path === '/api/product-stock' && method === 'GET') {
+        const data = getMockData();
+        return (data.products || []).map(item => ({
+            product_id: item.id,
+            product_name: item.name,
+            description: item.description || '',
+            base_price: item.price || 0,
+            quantity: item.qty || 0,
+            cost_per_unit: 0
+        }));
+    }
+
+    // Get ingredient imports history (mock)
+    if (path.includes('/api/ingredient-imports') && method === 'GET') {
+        const data = getMockData();
+        return (data.imports || []).map(item => ({
+            id: item.id,
+            ingredient_id: item.ingredientId,
+            ingredient_name: item.ingredientName,
+            quantity: item.quantity,
+            unit_price: item.unitPrice,
+            import_date: item.date || new Date().toISOString().split('T')[0]
+        }));
+    }
+
+    // Post ingredient imports (mock)
+    if (path === '/api/ingredient-imports' && method === 'POST') {
+        const data = getMockData();
+        if (!data.imports) data.imports = [];
+        const newImport = {
+            id: (data.imports.length || 0) + 1,
+            ingredientId: body?.ingredientId,
+            ingredientName: data.ingredients?.find(i => i.id === body?.ingredientId)?.name || '',
+            quantity: body?.quantity,
+            unitPrice: body?.unitPrice,
+            date: new Date().toISOString().split('T')[0]
+        };
+        data.imports.push(newImport);
+        saveMockData(data);
+        return { success: true };
+    }
+
+    // Post batch ingredient imports (mock)
+    if (path === '/api/ingredient-imports/batch' && method === 'POST') {
+        const data = getMockData();
+        if (!data.imports) data.imports = [];
+        const items = body?.items || [];
+        items.forEach((item, idx) => {
+            const ingredient = data.ingredients?.find(i => i.id === item.ingredientId);
+            data.imports.push({
+                id: (data.imports.length || 0) + idx + 1,
+                ingredientId: item.ingredientId,
+                ingredientName: ingredient?.name || '',
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                date: new Date().toISOString().split('T')[0]
+            });
+        });
+        saveMockData(data);
+        return { success: true, count: items.length };
     }
 
     throw new Error(`Unsupported offline request: ${method} ${path}`);

@@ -6,7 +6,7 @@ CREATE TABLE ingredient_imports (
     quantity DECIMAL(10) NOT NULL,
     import_price DECIMAL(10, 3) NOT NULL,
     import_date DATE DEFAULT (CURRENT_DATE),
-    CONSTRAINT FOREIGN KEY fk_import_shop(shop_id) REFERENCES shop(shop_id) ON DELETE CASCADE ,
+    CONSTRAINT FOREIGN KEY fk_import_shop(shop_id) REFERENCES shop(shop_uid) ON DELETE CASCADE ,
     CONSTRAINT FOREIGN KEY fk_import_ingredient(ingredient_id) REFERENCES ingredients(id) ON DELETE CASCADE
 );
 
@@ -18,7 +18,7 @@ CREATE TABLE daily_productions (
     quantity_produced INT NOT NULL,
     production_date DATE DEFAULT (CURRENT_DATE),
     PRIMARY KEY (shop_id, id),
-    CONSTRAINT FOREIGN KEY fk_daily_production_shop(shop_id) REFERENCES shop(shop_id) ON DELETE CASCADE ,
+    CONSTRAINT FOREIGN KEY fk_daily_production_shop(shop_id) REFERENCES shop(shop_uid) ON DELETE CASCADE ,
     CONSTRAINT FOREIGN KEY fk_product_id(product_id) REFERENCES products(id)
 );
 
@@ -30,7 +30,7 @@ CREATE TABLE daily_sales (
     quantity_sold INT NOT NULL,
     actual_sale_price DECIMAL(10, 2) NOT NULL,
     sale_date DATE DEFAULT (CURRENT_DATE),
-    FOREIGN KEY fk_sales_shop(shop_id) REFERENCES shop(shop_id) ON DELETE CASCADE ,
+    FOREIGN KEY fk_sales_shop(shop_id) REFERENCES shop(shop_uid) ON DELETE CASCADE ,
     FOREIGN KEY fk_sales_id(product_id) REFERENCES products(id)
 );
 
@@ -41,7 +41,7 @@ CREATE TABLE fixed_costs (
     cost_name VARCHAR(255) NOT NULL,
     amount DECIMAL(15, 2) NOT NULL,
     cost_date DATE DEFAULT (CURRENT_DATE),
-    FOREIGN KEY fk_shop_fixed_cost(shop_id) REFERENCES shop(shop_id) ON DELETE CASCADE
+    FOREIGN KEY fk_shop_fixed_cost(shop_id) REFERENCES shop(shop_uid) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS ingredient_stock (
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS ingredient_stock (
     ingredient_id INT(3) NOT NULL,
     quantity DECIMAL(10,1) DEFAULT 0,
     PRIMARY KEY (shop_id, ingredient_id),
-    FOREIGN KEY fk_shop_ingredients_stock(shop_id) REFERENCES shop(shop_id) ON DELETE CASCADE ,
+    FOREIGN KEY fk_shop_ingredients_stock(shop_id) REFERENCES shop(shop_uid) ON DELETE CASCADE ,
     FOREIGN KEY fk_ingredients_stock(ingredient_id) REFERENCES ingredients(id) ON DELETE CASCADE
 );
 
@@ -59,6 +59,6 @@ CREATE TABLE product_stock (
     product_id INT(3) NOT NULL,
     quantity INT DEFAULT 0,
     PRIMARY KEY (shop_id, product_id),
-    FOREIGN KEY fk_shop_products_stock(shop_id) REFERENCES shop(shop_id) ON DELETE CASCADE ,
+    FOREIGN KEY fk_shop_products_stock(shop_id) REFERENCES shop(shop_uid) ON DELETE CASCADE ,
     FOREIGN KEY fk_products_stock(product_id) REFERENCES products(id) ON DELETE CASCADE
 );

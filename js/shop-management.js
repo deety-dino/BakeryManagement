@@ -743,7 +743,7 @@ async function addNewRecipe() {
 
     // Collect ingredients
     const ingredientRows = document.querySelectorAll('#recipeIngredientsRows .recipe-ingredient-row');
-    const ingredients = {};
+    const ingredients = [];
 
     for (const row of ingredientRows) {
         const ingredientId = row.querySelector('.recipeIngredient').value;
@@ -751,13 +751,13 @@ async function addNewRecipe() {
 
         if (!ingredientId || !quantity || quantity <= 0) continue;
 
-        const ing = (window.dbIngredientCatalog || []).find(i => i.id == ingredientId);
-        if (ing) {
-            ingredients[ing.name] = quantity;
-        }
+        ingredients.push({
+            ingredientId: Number(ingredientId),
+            quantity
+        });
     }
 
-    if (Object.keys(ingredients).length === 0) {
+    if (ingredients.length === 0) {
         alert('Thêm ít nhất 1 nguyên liệu');
         return;
     }
@@ -887,7 +887,7 @@ async function saveRecipe() {
 
     // Collect ingredients
     const ingredientRows = document.querySelectorAll('#editRecipeIngredientsRows .edit-recipe-ingredient-row');
-    const ingredients = {};
+    const ingredients = [];
 
     for (const row of ingredientRows) {
         const ingredientId = row.querySelector('.editRecipeIngredient').value;
@@ -895,13 +895,13 @@ async function saveRecipe() {
 
         if (!ingredientId || !quantity || quantity <= 0) continue;
 
-        const ing = (window.dbIngredientCatalog || []).find(i => i.id == ingredientId);
-        if (ing) {
-            ingredients[ing.name] = quantity;
-        }
+        ingredients.push({
+            ingredientId: Number(ingredientId),
+            quantity
+        });
     }
 
-    if (Object.keys(ingredients).length === 0) {
+    if (ingredients.length === 0) {
         alert('Thêm ít nhất 1 nguyên liệu');
         return;
     }

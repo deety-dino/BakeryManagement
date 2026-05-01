@@ -7,14 +7,15 @@ CREATE TABLE IF NOT EXISTS master (
     password_hash VARCHAR(255) NOT NULL,
     master_name VARCHAR(255) NOT NULL
 );
-
 CREATE TABLE IF NOT EXISTS shop (
-    shop_id VARCHAR(36) NOT NULL PRIMARY KEY DEFAULT (UUID()),
+    shop_uid VARCHAR(36) NOT NULL PRIMARY KEY DEFAULT (UUID()),
+    shop_id VARCHAR(36) NOT NULL DEFAULT ("main"),
     master_id VARCHAR(36) NOT NULL,
     shop_name VARCHAR(50) NOT NULL,
     administrator_password VARCHAR(255) NOT NULL,
     staff_password VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_shop_shop_id (shop_id),
     UNIQUE KEY uq_shop_master_name (master_id, shop_name),
     CONSTRAINT fk_shop_master FOREIGN KEY (master_id) REFERENCES master(master_uid) ON DELETE CASCADE
 );

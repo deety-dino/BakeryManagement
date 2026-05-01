@@ -49,7 +49,7 @@ function requireShop(req, res) {
 
 async function getDefaultShop(masterUid) {
     const [rows] = await pool.query(
-        `SELECT shop_id, shop_name
+        `SELECT shop_id, shop_uid, shop_name
          FROM shop
          WHERE master_id = ?
          ORDER BY created_at ASC, shop_name ASC
@@ -242,6 +242,35 @@ async function buildSalesHistory(masterUid, shopId) {
     }));
 }
 
+async function buildProductStock(masterUid, shopId) {
+    const [rows] = await pool.query(
+        `SELECT ps.product_id,
+                p.name AS product_name,
+                p.description,
+                p.base_price,
+                COALESCE(ps.quantity, 0) AS quantity,
+                COALESCE(cost.cost_per_unit, 0) AS cost_per_unit
+         FROM products p
+         LEFT JOIN product_stock ps ON ps.product_id = p.id AND ps.shop_id = ?
+         LEFT JOIN (
+            SELECT r.product_id,
+                   SUM(r.quantity_needed * COALESCE(ip.avg_unit_price, 0)) AS cost_per_unit
+            FROM recipes r
+            LEFT JOIN (
+                SELECT ingredient_id, AVG(import_price) AS avg_unit_price
+                FROM ingredient_imports
+                GROUP BY ingredient_id
+            ) ip ON ip.ingredient_id = r.ingredient_id
+            WHERE r.master_id = ?
+            GROUP BY r.product_id
+         ) cost ON cost.product_id = p.id
+         WHERE p.master_id = ?
+         ORDER BY p.name ASC`,
+        [shopId, masterUid, masterUid]
+    );
+    return rows;
+}
+
 async function buildBootstrap(masterUid, shopId) {
     const [masterRows] = await pool.query(
         `SELECT master_uid, master_id, master_name
@@ -253,9 +282,9 @@ async function buildBootstrap(masterUid, shopId) {
     const master = masterRows[0] || null;
     const shop = shopId
         ? (await pool.query(
-            `SELECT shop_id, shop_name
+            `SELECT shop_uid, shop_name
              FROM shop
-             WHERE shop_id = ? AND master_id = ?
+             WHERE shop_uid = ? AND master_id = ?
              LIMIT 1`,
             [shopId, masterUid]
         ))[0][0] || null
@@ -266,7 +295,7 @@ async function buildBootstrap(masterUid, shopId) {
     }
 
     const activeShop = shop || (await getDefaultShop(masterUid));
-    const resolvedShopId = activeShop?.shop_id || shopId || '';
+    const resolvedShopId = activeShop?.shop_uid || shopId || '';
 
     return {
         session: {
@@ -368,7 +397,7 @@ app.all('/api/auth/master-login', async (req, res) => {
             masterUid: master.master_uid,
             masterId: master.master_id,
             masterName: master.master_name,
-            shopId: defaultShop?.shop_id || '',
+            shopId: defaultShop?.shop_uid || '',
             shopName: defaultShop?.shop_name || '',
             role: 'master'
         });
@@ -442,7 +471,7 @@ app.all('/api/auth/shop-login', async (req, res) => {
         }
 
         const [rows] = await pool.query(
-            `SELECT shop_id, shop_name, administrator_password, staff_password
+            `SELECT shop_uid, shop_id, shop_name, administrator_password, staff_password
              FROM shop
              WHERE shop_id = ? AND master_id = ?`,
             [resolvedShopId, resolvedMasterUid]
@@ -463,7 +492,8 @@ app.all('/api/auth/shop-login', async (req, res) => {
             masterUid: resolvedMasterUid,
             masterId: resolvedMasterId,
             masterName: resolvedMasterName,
-            shopId: shop.shop_id,
+            shopId: shop.shop_uid,
+            shopCode: shop.shop_id,
             shopName: shop.shop_name,
             role
         });
@@ -517,20 +547,33 @@ app.all('/api/auth/register', async (req, res) => {
             return res.status(500).json({ error: 'Không thể tạo master' });
         }
 
+        const [existingShop] = await conn.query(
+            'SELECT shop_uid FROM shop WHERE master_id = ? AND shop_name = ? LIMIT 1',
+            [masterUid, shopName]
+        );
+        if (existingShop.length) {
+            await conn.rollback();
+            return res.status(409).json({ error: 'shop_name đã tồn tại trong master này' });
+        }
+
         await conn.query(
             `INSERT INTO shop (master_id, shop_name, administrator_password, staff_password)
              VALUES (?, ?, ?, ?)`,
             [masterUid, shopName, passwordHash, passwordHash]
         );
 
-        const [srows] = await conn.query('SELECT shop_id FROM shop WHERE master_id = ? AND shop_name = ? LIMIT 1', [masterUid, shopName]);
-        const shopId = srows[0]?.shop_id || '';
+        const [srows] = await conn.query(
+            'SELECT shop_uid, shop_id FROM shop WHERE master_id = ? AND shop_name = ? LIMIT 1',
+            [masterUid, shopName]
+        );
+        const shopUid = srows[0]?.shop_uid || '';
+        const shopCode = srows[0]?.shop_id || 'main';
 
         // No ingredients/products exist for a fresh master, so nothing to seed.
 
         await conn.commit();
 
-        res.json({ masterUid, masterId, masterName, shopId, shopName });
+        res.json({ masterUid, masterId, masterName, shopId: shopUid, shopUid, shopCode, shopName });
     } catch (error) {
         await conn.rollback();
         res.status(500).json({ error: error?.message || String(error) });
@@ -654,11 +697,26 @@ app.post('/api/shops', async (req, res) => {
             return res.status(409).json({ error: 'shop_id đã tồn tại' });
         }
 
+        const [existingName] = await conn.query(
+            'SELECT shop_uid FROM shop WHERE master_id = ? AND shop_name = ? LIMIT 1',
+            [masterUid, shopName]
+        );
+        if (existingName.length) {
+            await conn.rollback();
+            return res.status(409).json({ error: 'shop_name đã tồn tại trong master này' });
+        }
+
         await conn.query(
             `INSERT INTO shop (shop_id, master_id, shop_name, administrator_password, staff_password)
              VALUES (?, ?, ?, ?, ?)`,
             [shopId, masterUid, shopName, sha256Hex(adminPassword), sha256Hex(staffPassword)]
         );
+
+        const [shopRows] = await conn.query(
+            'SELECT shop_uid FROM shop WHERE shop_id = ? AND master_id = ? LIMIT 1',
+            [shopId, masterUid]
+        );
+        const shopUid = shopRows[0]?.shop_uid || shopId;
 
         const [ingredientRows] = await conn.query(
             'SELECT id FROM ingredients WHERE master_id = ?',
@@ -669,7 +727,7 @@ app.post('/api/shops', async (req, res) => {
                 `INSERT INTO ingredient_stock (shop_id, ingredient_id, quantity)
                  VALUES (?, ?, 0)
                  ON DUPLICATE KEY UPDATE quantity = quantity`,
-                [shopId, ingredientRow.id]
+                [shopUid, ingredientRow.id]
             );
         }
 
@@ -682,12 +740,12 @@ app.post('/api/shops', async (req, res) => {
                 `INSERT INTO product_stock (shop_id, product_id, quantity)
                  VALUES (?, ?, 0)
                  ON DUPLICATE KEY UPDATE quantity = quantity`,
-                [shopId, productRow.id]
+                [shopUid, productRow.id]
             );
         }
 
         await conn.commit();
-        res.json({ success: true, shop_id: shopId, shop_name: shopName });
+        res.json({ success: true, shop_id: shopId, shop_uid: shopUid, shop_name: shopName });
     } catch (error) {
         await conn.rollback();
         res.status(500).json({ error: error?.message || String(error) });
@@ -817,13 +875,13 @@ app.post('/api/ingredients', async (req, res) => {
         );
 
         const ingredientId = insertResult.insertId || nextIngredientId;
-        const [shopRows] = await conn.query('SELECT shop_id FROM shop WHERE master_id = ?', [masterUid]);
+        const [shopRows] = await conn.query('SELECT shop_uid FROM shop WHERE master_id = ?', [masterUid]);
         for (const shopRow of shopRows) {
             await conn.query(
                 `INSERT INTO ingredient_stock (shop_id, ingredient_id, quantity)
                  VALUES (?, ?, 0)
                  ON DUPLICATE KEY UPDATE quantity = quantity`,
-                [shopRow.shop_id, ingredientId]
+                [shopRow.shop_uid, ingredientId]
             );
         }
 
@@ -844,6 +902,19 @@ app.get('/api/ingredient-stock', async (_req, res) => {
         const shopId = requireShop(_req, res);
         if (!shopId) return;
         const rows = await buildIngredientStock(masterUid, shopId);
+        res.json(rows);
+    } catch (error) {
+        res.status(500).json({ error: error?.message || String(error) });
+    }
+});
+
+app.get('/api/product-stock', async (_req, res) => {
+    try {
+        const masterUid = requireMaster(_req, res);
+        if (!masterUid) return;
+        const shopId = requireShop(_req, res);
+        if (!shopId) return;
+        const rows = await buildProductStock(masterUid, shopId);
         res.json(rows);
     } catch (error) {
         res.status(500).json({ error: error?.message || String(error) });
@@ -1046,11 +1117,31 @@ app.post('/api/recipes', async (req, res) => {
     if (!masterUid) return;
     const name = String(req.body?.name || '').trim();
     const description = String(req.body?.description || '').trim();
-    const ingredients = Array.isArray(req.body?.ingredients) ? req.body.ingredients : [];
+    const ingredientPayload = req.body?.ingredients;
 
     if (!name) {
         return res.status(400).json({ error: 'Tên sản phẩm không được để trống' });
     }
+
+    let ingredients = [];
+    if (Array.isArray(ingredientPayload)) {
+        ingredients = ingredientPayload;
+    } else if (ingredientPayload && typeof ingredientPayload === 'object') {
+        const entries = Object.entries(ingredientPayload);
+        const [ingredientRows] = await pool.query(
+            `SELECT id, name
+             FROM ingredients
+             WHERE master_id = ?`,
+            [masterUid]
+        );
+        const ingredientMap = new Map(ingredientRows.map((item) => [String(item.name).trim().toLowerCase(), item.id]));
+        ingredients = entries.map(([key, value], index) => ({
+            index,
+            ingredientId: Number.isFinite(Number(key)) ? Number(key) : Number(ingredientMap.get(String(key).trim().toLowerCase()) || 0),
+            quantity: Number(value)
+        })).filter((item) => item.ingredientId > 0);
+    }
+
     if (!ingredients.length) {
         return res.status(400).json({ error: 'Công thức phải có ít nhất 1 nguyên liệu' });
     }
@@ -1082,6 +1173,107 @@ app.post('/api/recipes', async (req, res) => {
             [nextProductId, masterUid, name, description || null]
         );
         const productId = insertProduct.insertId || nextProductId;
+
+        for (const item of normalized) {
+            const [ingredientRows] = await conn.query('SELECT id FROM ingredients WHERE id = ? AND master_id = ?', [item.ingredientId, masterUid]);
+            if (!ingredientRows.length) {
+                await conn.rollback();
+                return res.status(404).json({ error: `Dòng ${item.index + 1}: Nguyên liệu không tồn tại` });
+            }
+
+            await conn.query(
+                `INSERT INTO recipes (master_id, product_id, ingredient_id, quantity_needed)
+                 VALUES (?, ?, ?, ?)`,
+                [masterUid, productId, item.ingredientId, item.quantity]
+            );
+        }
+
+        await conn.commit();
+        res.json({ success: true, productId });
+    } catch (error) {
+        await conn.rollback();
+        res.status(500).json({ error: error?.message || String(error) });
+    } finally {
+        conn.release();
+    }
+});
+
+app.put('/api/recipes/:productId', async (req, res) => {
+    const productId = Number(req.params.productId);
+    if (!Number.isFinite(productId) || productId <= 0) {
+        return res.status(400).json({ error: 'productId không hợp lệ' });
+    }
+
+    const masterUid = requireMaster(req, res);
+    if (!masterUid) return;
+
+    const name = String(req.body?.name || '').trim();
+    const description = String(req.body?.description || '').trim();
+    const ingredientPayload = req.body?.ingredients;
+
+    if (!name) {
+        return res.status(400).json({ error: 'Tên sản phẩm không được để trống' });
+    }
+
+    let ingredients = [];
+    if (Array.isArray(ingredientPayload)) {
+        ingredients = ingredientPayload;
+    } else if (ingredientPayload && typeof ingredientPayload === 'object') {
+        const entries = Object.entries(ingredientPayload);
+        const [ingredientRows] = await pool.query(
+            `SELECT id, name
+             FROM ingredients
+             WHERE master_id = ?`,
+            [masterUid]
+        );
+        const ingredientMap = new Map(ingredientRows.map((item) => [String(item.name).trim().toLowerCase(), item.id]));
+        ingredients = entries.map(([key, value], index) => ({
+            index,
+            ingredientId: Number.isFinite(Number(key)) ? Number(key) : Number(ingredientMap.get(String(key).trim().toLowerCase()) || 0),
+            quantity: Number(value)
+        })).filter((item) => item.ingredientId > 0);
+    }
+
+    if (!ingredients.length) {
+        return res.status(400).json({ error: 'Công thức phải có ít nhất 1 nguyên liệu' });
+    }
+
+    const normalized = ingredients.map((item, index) => ({
+        index,
+        ingredientId: Number(item?.ingredientId),
+        quantity: Number(item?.quantity)
+    }));
+
+    for (const item of normalized) {
+        if (!Number.isFinite(item.ingredientId) || item.ingredientId <= 0) {
+            return res.status(400).json({ error: `Dòng ${item.index + 1}: ingredientId không hợp lệ` });
+        }
+        if (!Number.isFinite(item.quantity) || item.quantity <= 0) {
+            return res.status(400).json({ error: `Dòng ${item.index + 1}: quantity phải lớn hơn 0` });
+        }
+    }
+
+    const conn = await pool.getConnection();
+    try {
+        await conn.beginTransaction();
+
+        const [productRows] = await conn.query(
+            'SELECT id FROM products WHERE id = ? AND master_id = ? LIMIT 1',
+            [productId, masterUid]
+        );
+        if (!productRows.length) {
+            await conn.rollback();
+            return res.status(404).json({ error: 'Không tìm thấy công thức' });
+        }
+
+        await conn.query(
+            `UPDATE products
+             SET name = ?, description = ?
+             WHERE id = ? AND master_id = ?`,
+            [name, description || null, productId, masterUid]
+        );
+
+        await conn.query('DELETE FROM recipes WHERE product_id = ? AND master_id = ?', [productId, masterUid]);
 
         for (const item of normalized) {
             const [ingredientRows] = await conn.query('SELECT id FROM ingredients WHERE id = ? AND master_id = ?', [item.ingredientId, masterUid]);

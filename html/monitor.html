@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>BakeManage - Monitor</title>
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/monitor.css">
+</head>
+<body>
+    <div id="monitorApp" class="monitor-app">
+        <div class="container monitor-shell">
+            <header class="app-header monitor-header">
+                <div>
+                    <div class="eyebrow">Chi nhánh / Quản lý</div>
+                    <h1>📡 Monitor vận hành chi nhánh</h1>
+                    <div class="sub">Theo dõi kho, nhập hàng và bố cục quản lý nhân sự</div>
+                </div>
+                <div class="user-info monitor-user-info">
+                    <span>👤 <span id="currentUser"></span></span>
+                    <button class="logout-btn" onclick="logout()">Đăng xuất</button>
+                </div>
+            </header>
+
+            <section class="hero-panel">
+                <div>
+                    <p class="hero-label">Tình trạng hôm nay</p>
+                    <h2>Quản lý kho và nhân sự trong một màn hình duy nhất</h2>
+                    <p class="hero-copy">Trang monitor được thiết kế cho quản lý chi nhánh: nhập nguyên liệu có bước xác nhận, theo dõi tồn kho nguyên liệu - bánh, và bố cục sẵn cho phần nhân viên.</p>
+                </div>
+                <div class="hero-metrics" id="heroMetrics">
+                    <div class="metric-tile">
+                        <span>Nguyên liệu đang có</span>
+                        <strong id="metricIngredientCount">0</strong>
+                    </div>
+                    <div class="metric-tile">
+                        <span>Bánh còn lại</span>
+                        <strong id="metricCakeCount">0</strong>
+                    </div>
+                    <div class="metric-tile">
+                        <span>Nhân viên</span>
+                        <strong id="metricEmployeeCount">0</strong>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card action-card">
+                <div class="section-head">
+                    <div>
+                        <p class="section-kicker">Nhập kho</p>
+                        <h3>Nhập thêm nguyên liệu</h3>
+                    </div>
+                    <span class="section-note">Thêm nhiều mặt hàng rồi nhập cùng lúc</span>
+                </div>
+                <div class="import-form-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr auto;">
+                    <div>
+                        <label for="importCategory">Danh mục</label>
+                        <select id="importCategory"></select>
+                    </div>
+                    <div>
+                        <label for="importIngredient">Nguyên liệu</label>
+                        <select id="importIngredient"></select>
+                    </div>
+                    <div>
+                        <label for="importQuantity">Số lượng</label>
+                        <input type="number" id="importQuantity" min="1" step="1" placeholder="VD: 25">
+                    </div>
+                    <div>
+                        <label for="importUnitPrice">Đơn giá</label>
+                        <input type="number" id="importUnitPrice" min="0" step="1000" placeholder="VD: 145000">
+                    </div>
+                    <div>
+                        <label>&nbsp;</label>
+                        <button id="addImportRowBtn" type="button" style="width: 100%;">➕ Thêm</button>
+                    </div>
+                </div>
+                <div id="importHint" class="monitor-hint">Chọn danh mục, nguyên liệu, nhập số lượng và đơn giá, rồi nhấn "Thêm".</div>
+
+                <div style="margin-top: 20px;">
+                    <h4 style="margin-top: 0;">Danh sách nhập hàng</h4>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nguyên liệu</th>
+                                    <th>Số lượng</th>
+                                    <th>Đơn giá</th>
+                                    <th style="width: 80px;">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="importListBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="flex-btns" style="margin-top: 15px;">
+                    <button id="submitImportBtn">📥 Nhập hàng</button>
+                    <button id="resetImportFormBtn" class="btn-outline" type="button">Làm mới</button>
+                </div>
+            </section>
+
+            <section class="card import-history-card">
+                <div class="section-head">
+                    <div>
+                        <p class="section-kicker">Lịch sử</p>
+                        <h3>Lịch sử nhập hàng gần đây</h3>
+                    </div>
+                    <span class="section-note">Hiển thị những lần nhập hàng mới nhất</span>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nguyên liệu</th>
+                                <th>Số lượng nhập</th>
+                                <th>Đơn giá</th>
+                                <th>Ngày nhập</th>
+                            </tr>
+                        </thead>
+                        <tbody id="importHistoryBody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="card warehouse-card">
+                <div class="section-head">
+                    <div>
+                        <p class="section-kicker">Quản lý kho</p>
+                        <h3>Thống kê tồn kho nguyên liệu và bánh</h3>
+                    </div>
+                    <span class="section-note">Hai bảng đặt ngang nhau, cùng chiều cao</span>
+                </div>
+                <div class="warehouse-grid">
+                    <article class="warehouse-panel">
+                        <div class="panel-title">
+                            <h4>Kho nguyên liệu</h4>
+                            <span id="ingredientSummary">0 mặt hàng</span>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Nguyên liệu</th>
+                                        <th>Tồn kho</th>
+                                        <th>Đơn vị</th>
+                                        <th>Đơn giá</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ingredientStockBody"></tbody>
+                            </table>
+                        </div>
+                    </article>
+                    <article class="warehouse-panel">
+                        <div class="panel-title">
+                            <h4>Kho bánh</h4>
+                            <span id="cakeSummary">0 mặt hàng</span>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Sản phẩm</th>
+                                        <th>Còn lại</th>
+                                        <th>Cost</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cakeStockBody"></tbody>
+                            </table>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="card staff-card">
+                <div class="section-head">
+                    <div>
+                        <p class="section-kicker">Nhân sự</p>
+                        <h3>Quản lý nhân viên</h3>
+                    </div>
+                    <span class="section-note">Bố cục đã sẵn sàng, dữ liệu lưu trữ sẽ nối sau</span>
+                </div>
+                <div class="staff-layout">
+                    <div class="staff-form-panel">
+                        <div class="staff-form-grid">
+                            <div>
+                                <label>Họ và tên</label>
+                                <input type="text" placeholder="Nhập tên nhân viên">
+                            </div>
+                            <div>
+                                <label>Chức vụ</label>
+                                <select>
+                                    <option value="">-- Chọn chức vụ --</option>
+                                    <option>Quản lý</option>
+                                    <option>Thu ngân</option>
+                                    <option>Thợ bánh</option>
+                                    <option>Phụ việc</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>Số điện thoại</label>
+                                <input type="text" placeholder="Nhập số điện thoại">
+                            </div>
+                            <div>
+                                <label>Trạng thái</label>
+                                <select>
+                                    <option>Đang làm</option>
+                                    <option>Tạm nghỉ</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="flex-btns">
+                            <button type="button">➕ Thêm nhân viên</button>
+                            <button type="button" class="btn-outline">✏️ Chỉnh sửa</button>
+                            <button type="button" class="btn-outline danger-outline">🗑️ Bớt nhân viên</button>
+                        </div>
+                    </div>
+                    <div class="staff-table-panel">
+                        <div class="panel-title">
+                            <h4>Danh sách nhân viên</h4>
+                            <span>Khung dữ liệu mẫu</span>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Họ tên</th>
+                                        <th>Chức vụ</th>
+                                        <th>SĐT</th>
+                                        <th>Trạng thái</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="staffTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div id="monitorToast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="../js/app-config.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const state = {
+                ingredients: [],
+                ingredientCatalog: [],
+                products: [],
+                staff: [],
+                imports: [],
+                importList: []
+            };
+
+            const importCategory = document.getElementById('importCategory');
+            const importIngredient = document.getElementById('importIngredient');
+            const importQuantity = document.getElementById('importQuantity');
+            const importUnitPrice = document.getElementById('importUnitPrice');
+            const toast = document.getElementById('monitorToast');
+
+            // Display current user
+            const userEl = document.getElementById('currentUser');
+            const session = readAuthSession?.() || (window.dbApi?.getSession?.());
+            if (userEl && session) {
+                userEl.textContent = session.masterId || session.masterUid || 'Người dùng';
+            }
+
+            async function loadData() {
+                try {
+                    // Check if session is ready
+                    const session = readAuthSession?.() || (window.dbApi?.getSession?.());
+                    console.log('[monitor] Current session:', session);
+                    
+                    if (!session || !session.masterUid) {
+                        console.warn('[monitor] No session available, redirecting to login');
+                        showToast('Vui lòng đăng nhập lại');
+                        setTimeout(() => goToLoginPage?.(), 1500);
+                        return;
+                    }
+
+                    console.log('[monitor] Loading data for shop:', session.shopId);
+                    
+                    const requests = [
+                        { name: 'ingredient-stock', promise: apiRequest('/api/ingredient-stock') },
+                        { name: 'ingredients/catalog', promise: apiRequest('/api/ingredients/catalog') },
+                        { name: 'product-stock', promise: apiRequest('/api/product-stock') },
+                        { name: 'ingredient-imports', promise: apiRequest('/api/ingredient-imports') }
+                    ];
+
+                    const results = await Promise.allSettled(requests.map(r => r.promise));
+                    
+                    results.forEach((result, index) => {
+                        const reqName = requests[index].name;
+                        if (result.status === 'fulfilled') {
+                            console.log(`[monitor] ${reqName} loaded:`, result.value);
+                        } else {
+                            console.error(`[monitor] ${reqName} failed:`, result.reason);
+                        }
+                    });
+
+                    state.ingredients = results[0].status === 'fulfilled' ? results[0].value || [] : [];
+                    state.ingredientCatalog = results[1].status === 'fulfilled' ? results[1].value || [] : [];
+                    state.products = results[2].status === 'fulfilled' ? results[2].value || [] : [];
+                    state.imports = results[3].status === 'fulfilled' ? results[3].value || [] : [];
+
+                    renderCategoryOptions();
+                    renderWarehouse();
+                    renderImportHistory();
+                    showToast('Dữ liệu tải thành công');
+                } catch (error) {
+                    console.error('[monitor] Failed to load data:', error);
+                    showToast(`Lỗi tải dữ liệu: ${error.message}`);
+                }
+            }
+
+            function showToast(message) {
+                if (!toast) return;
+                toast.textContent = message;
+                toast.classList.add('show');
+                window.clearTimeout(window.__monitorToastTimer);
+                window.__monitorToastTimer = window.setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 2400);
+            }
+
+            function renderCategoryOptions() {
+                if (!importCategory) return;
+                const categories = [...new Set(state.ingredientCatalog.map(item => item.category).filter(Boolean))].sort();
+                importCategory.innerHTML = '<option value="">-- Chọn danh mục --</option>';
+                categories.forEach((cat) => {
+                    const option = document.createElement('option');
+                    option.value = cat;
+                    option.textContent = cat;
+                    importCategory.appendChild(option);
+                });
+            }
+
+            function renderIngredientOptions() {
+                if (!importIngredient) return;
+                const selectedCategory = importCategory?.value || '';
+                const filteredItems = selectedCategory
+                    ? state.ingredientCatalog.filter(item => item.category === selectedCategory)
+                    : state.ingredientCatalog;
+
+                importIngredient.innerHTML = '<option value="">-- Chọn nguyên liệu --</option>';
+                filteredItems.forEach((item) => {
+                    const option = document.createElement('option');
+                    option.value = String(item.id);
+                    option.textContent = `${item.name} (${item.unit})`;
+                    option.dataset.name = item.name;
+                    importIngredient.appendChild(option);
+                });
+            }
+
+            function renderImportList() {
+                const listBody = document.getElementById('importListBody');
+                if (!listBody) return;
+
+                listBody.innerHTML = state.importList.map((item, index) => `
+                    <tr>
+                        <td>${item.ingredientName}</td>
+                        <td><strong>${Number(item.quantity).toLocaleString('vi-VN')}</strong></td>
+                        <td>${Number(item.unitPrice).toLocaleString('vi-VN')}</td>
+                        <td>
+                            <button type="button" class="btn-outline danger-outline" onclick="window.removeImportRow(${index})">🗑️ Xóa</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            function renderImportHistory() {
+                const historyBody = document.getElementById('importHistoryBody');
+                if (!historyBody) return;
+
+                const recentImports = state.imports.slice(0, 10);
+                historyBody.innerHTML = recentImports.map((item) => {
+                    const date = new Date(item.import_date);
+                    const formattedDate = date.toLocaleDateString('vi-VN');
+                    return `
+                        <tr>
+                            <td>${item.ingredient_name}</td>
+                            <td><strong>${item.quantity}</strong></td>
+                            <td>${Number(item.unit_price || 0).toLocaleString('vi-VN')}</td>
+                            <td>${formattedDate}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            function renderWarehouse() {
+                const ingredientBody = document.getElementById('ingredientStockBody');
+                const cakeBody = document.getElementById('cakeStockBody');
+
+                if (ingredientBody) {
+                    ingredientBody.innerHTML = state.ingredients.map((item) => `
+                        <tr>
+                            <td>${item.name}</td>
+                            <td><strong>${Number(item.quantity || 0).toLocaleString('vi-VN')}</strong></td>
+                            <td>${item.unit}</td>
+                            <td>${Number(item.avg_unit_price_month || 0).toLocaleString('vi-VN')}</td>
+                        </tr>
+                    `).join('');
+                }
+
+                if (cakeBody) {
+                    cakeBody.innerHTML = state.products.map((item) => `
+                        <tr>
+                            <td>${item.product_name}</td>
+                            <td><strong>${Number(item.quantity || 0).toLocaleString('vi-VN')}</strong></td>
+                            <td>${Number(item.cost_per_unit || 0).toLocaleString('vi-VN')}</td>
+                        </tr>
+                    `).join('');
+                }
+
+                const ingredientSummary = document.getElementById('ingredientSummary');
+                const cakeSummary = document.getElementById('cakeSummary');
+                const metricIngredientCount = document.getElementById('metricIngredientCount');
+                const metricCakeCount = document.getElementById('metricCakeCount');
+                const metricEmployeeCount = document.getElementById('metricEmployeeCount');
+
+                if (ingredientSummary) ingredientSummary.textContent = `${state.ingredients.length} mặt hàng`;
+                if (cakeSummary) cakeSummary.textContent = `${state.products.length} mặt hàng`;
+                if (metricIngredientCount) metricIngredientCount.textContent = state.ingredients.reduce((sum, item) => sum + Number(item.quantity || 0), 0).toLocaleString('vi-VN');
+                if (metricCakeCount) metricCakeCount.textContent = state.products.reduce((sum, item) => sum + Number(item.quantity || 0), 0).toLocaleString('vi-VN');
+                if (metricEmployeeCount) metricEmployeeCount.textContent = '0';
+            }
+
+            // Global function to remove import row
+            window.removeImportRow = function(index) {
+                state.importList.splice(index, 1);
+                renderImportList();
+                showToast('Đã xóa khỏi danh sách.');
+            };
+
+            document.getElementById('importCategory')?.addEventListener('change', renderIngredientOptions);
+
+            document.getElementById('addImportRowBtn')?.addEventListener('click', () => {
+                const ingredientId = Number(importIngredient?.value);
+                const ingredientOption = importIngredient?.options[importIngredient.selectedIndex];
+                const ingredientName = ingredientOption?.dataset.name || ingredientOption?.textContent || '';
+                const quantity = Number(importQuantity?.value);
+                const unitPrice = Number(importUnitPrice?.value);
+
+                if (!ingredientId || !quantity || !unitPrice) {
+                    showToast('Vui lòng chọn nguyên liệu, nhập số lượng và đơn giá.');
+                    return;
+                }
+
+                state.importList.push({
+                    ingredientId,
+                    ingredientName,
+                    quantity,
+                    unitPrice
+                });
+
+                importIngredient.value = '';
+                importQuantity.value = '';
+                importUnitPrice.value = '';
+                renderIngredientOptions();
+                renderImportList();
+                showToast(`Đã thêm ${ingredientName} vào danh sách.`);
+            });
+
+            document.getElementById('submitImportBtn')?.addEventListener('click', async () => {
+                if (!state.importList.length) {
+                    showToast('Danh sách nhập hàng trống.');
+                    return;
+                }
+
+                try {
+                    const response = await apiRequest('/api/ingredient-imports/batch', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            items: state.importList.map(item => ({
+                                ingredientId: item.ingredientId,
+                                quantity: item.quantity,
+                                unitPrice: item.unitPrice
+                            }))
+                        })
+                    });
+
+                    state.importList = [];
+                    renderImportList();
+                    await loadData();
+                    showToast(`Đã nhập ${response.count || state.importList.length} mặt hàng thành công.`);
+                } catch (error) {
+                    console.error('[monitor] Batch import failed:', error);
+                    showToast(`Lỗi: ${error.message}`);
+                }
+            });
+
+            document.getElementById('resetImportFormBtn')?.addEventListener('click', () => {
+                importCategory.value = '';
+                importIngredient.value = '';
+                importQuantity.value = '';
+                importUnitPrice.value = '';
+                state.importList = [];
+                renderIngredientOptions();
+                renderImportList();
+                showToast('Đã làm mới form nhập kho.');
+            });
+
+            // Load data on page load
+            await loadData();
+        });
+    </script>
+</body>
+</html>
