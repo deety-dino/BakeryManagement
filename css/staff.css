@@ -1,0 +1,20 @@
+/* Staff page styles */
+.staff-app .app-header { display:flex; justify-content:space-between; align-items:center; }
+.tabs { display:flex; gap:8px; margin:18px 0; }
+.tab-btn { padding:8px 12px; border-radius:6px; border:1px solid #ddd; background:#fff; cursor:pointer; }
+.tab-btn.active { background:#2b7cff; color:#fff; border-color:#2b7cff; }
+.tab-pane { display:none; }
+.tab-pane.active { display:block; }
+.card { background:#fff; border-radius:8px; padding:16px; box-shadow:0 1px 2px rgba(0,0,0,0.04); }
+.recipes-list { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:12px; }
+.recipe-card { border:1px solid #eee; padding:12px; border-radius:8px; background:#fafafa; }
+.recipe-card h4 { margin:0 0 8px 0; }
+.checkout-grid { display:flex; gap:12px; }
+.product-palette { flex:1; max-height:520px; overflow:auto; }
+.cart-pane { width:360px; border-left:1px dashed #eee; padding-left:12px; }
+.cart-items { min-height:120px; max-height:360px; overflow:auto; }
+.cart-item { display:flex; justify-content:space-between; gap:8px; padding:8px 0; border-bottom:1px solid #f0f0f0; }
+.cart-summary { margin-top:12px; display:flex; justify-content:space-between; align-items:center; }
+.primary { background:#2e7d32; color:#fff; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; }
+.product-tile { display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid #f4f4f4; }
+.qty-input { width:64px; }

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Staff - Bán hàng</title>
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/staff.css">
+</head>
+<body>
+    <div id="staffApp" class="staff-app">
+        <div class="container">
+            <div class="app-header">
+                <div>
+                    <h1>🧑‍🍳 Giao diện Nhân viên</h1>
+                    <div class="sub">Bán hàng nhanh — Công thức & Thanh toán</div>
+                </div>
+                <div class="user-info">
+                    <span>👤 <span id="currentUser"></span></span>
+                    <button class="logout-btn" onclick="logout()">Đăng xuất</button>
+                </div>
+            </div>
+
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="recipes">📚 Công thức</button>
+                <button class="tab-btn" data-tab="checkout">💳 Thanh toán</button>
+            </div>
+
+            <div id="recipes" class="tab-pane active">
+                <div class="card">
+                    <h3>📋 Danh sách Công thức</h3>
+                    <div id="recipesList" class="recipes-list">Đang tải...</div>
+                </div>
+            </div>
+
+            <div id="checkout" class="tab-pane">
+                <div class="card">
+                    <h3>🛒 Thanh toán</h3>
+                    <div class="checkout-grid">
+                        <div class="product-palette">
+                            <div id="productsPalette">Đang tải danh sách sản phẩm...</div>
+                        </div>
+                        <div class="cart-pane">
+                            <h4>Giỏ hàng</h4>
+                            <div id="cartItems" class="cart-items">Giỏ hàng trống</div>
+                            <div class="cart-summary">
+                                <div>Tổng: <span id="cartTotal">0</span> ₫</div>
+                                <button id="checkoutBtn" class="primary">Thanh toán</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/data-mock.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/data.js"></script>
+    <script src="../js/staff.js"></script>
+</body>
+</html>

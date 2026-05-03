@@ -47,6 +47,10 @@ function goToShopManagementPage() {
     window.location.href = pagePath('shop-management.html');
 }
 
+function goToStaffPage() {
+    window.location.href = pagePath('staff.html');
+}
+
 function setAuthMessage(text) {
     const message = document.getElementById('authMessage');
     if (message) message.innerText = text || '';
@@ -232,7 +236,7 @@ async function loginBranch(role) {
         writeSession(session);
 
         if (role === 'staff') {
-            goToMainAppPage();
+            goToStaffPage();
         } else {
             goToMonitorPage();
         }
@@ -270,7 +274,7 @@ function bootstrapAuth() {
         }
 
         if (session.role === 'staff') {
-            goToMainAppPage();
+            goToStaffPage();
         } else if (session.shopId) {
             goToMonitorPage();
         } else {
